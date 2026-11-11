@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">المنظّم</string>
+    <string name="app_name">سيرفري</string>
     <string name="host" translatable="false">amjad-server.tail6b6055.ts.net</string>
     <string name="launch_url" translatable="false">https://amjad-server.tail6b6055.ts.net/</string>
     <string name="asset_statements" translatable="false">
