@@ -5,7 +5,7 @@ name: android
 on:
   push:
     branches: ["**"]
-    tags: ["v*"]
+    tags: ["v*", "native-v*"]
   workflow_dispatch:
 
 permissions:
@@ -32,8 +32,8 @@ jobs:
       - name: Version from tag
         id: ver
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            name="${GITHUB_REF#refs/tags/v}"
+          if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/tags/native-v* ]]; then
+            name="${GITHUB_REF#refs/tags/}"; name="${name#native-}"; name="${name#v}"
             [[ "$name" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] || { echo "bad tag $name" >&2; exit 1; }
             code=$(( BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + BASH_REMATCH[3] ))
           else
@@ -57,7 +57,9 @@ jobs:
         run: |
           test -n "$ORCH_KEYSTORE_PASSWORD"
           chmod +x gradlew
-          ./gradlew --no-daemon :native:testDebugUnitTest :app:assembleRelease :native:assembleRelease -PversionName="${{ steps.ver.outputs.name }}" -PversionCode="${{ steps.ver.outputs.code }}"
+          # الإصدار الثابت (الوسم native-v*): سيرفري الأصلي بحزمة التطبيق المثبت com.amjadoh.orch، فيتحدّث فوق TWA
+          cut=""; [[ "$GITHUB_REF" == refs/tags/native-v* ]] && cut="-Pcutover=true"
+          ./gradlew --no-daemon :native:testDebugUnitTest :app:assembleRelease :native:assembleRelease $cut -PversionName="${{ steps.ver.outputs.name }}" -PversionCode="${{ steps.ver.outputs.code }}"
 
       - name: Verify signature
         run: |
@@ -89,7 +91,7 @@ jobs:
           path: out/
           retention-days: 14
 
-      - name: Release
+      - name: Release (TWA)
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
@@ -97,3 +99,14 @@ jobs:
           gh release create "$GITHUB_REF_NAME" out/orch-console-*.apk out/signing.txt \
             --title "المنظّم ${{ steps.ver.outputs.name }}" \
             --notes "تطبيق المنظّم (TWA) — نزّل ملف APK وثبّته على الجوال. يحتاج Tailscale شغّال وChrome."
+
+      - name: Release (سيرفري الأصلي الثابت)
+        if: startsWith(github.ref, 'refs/tags/native-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          grep -q "package: name='com.amjadoh.orch' versionCode='${{ steps.ver.outputs.code }}'" out/signing.txt
+          cp out/sirfari-native-dev.${{ github.run_number }}.apk "out/sirfari-${{ steps.ver.outputs.name }}.apk"
+          gh release create "$GITHUB_REF_NAME" "out/sirfari-${{ steps.ver.outputs.name }}.apk" out/signing.txt \
+            --title "سيرفري ${{ steps.ver.outputs.name }} (أصلي)" \
+            --notes "سيرفري الأصلي (Kotlin/Compose). يتحدّث فوق التطبيق الحالي بنفس الحزمة والتوقيع. الرجوع: إصدار TWA برقم أعلى."
