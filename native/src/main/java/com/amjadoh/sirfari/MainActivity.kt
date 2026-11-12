@@ -150,7 +150,8 @@ class MainActivity : FragmentActivity() {
                 .put("publicKey", WebAuthnShape.b64u(publicKey.encoded))
                 .put("publicKeyAlgorithm", WebAuthnShape.ALG_ES256))
         val code = try {
-            api.post("/api/link/register", JSONObject().put("linkId", linkId).put("label", "سيرفري الأصلي").put("credential", credential)).getString("code")
+            val r = api.post("/api/link/register", JSONObject().put("linkId", linkId).put("label", "سيرفري الأصلي").put("credential", credential))
+            r.getString("code") + (r.optString("ref").takeIf { it.isNotBlank() }?.let { "|$it" } ?: "")
         } catch (e: Exception) { device.forget(); throw e }
         onCode(code)
         repeat(200) { // 10 دقايق
@@ -222,7 +223,9 @@ class MainActivity : FragmentActivity() {
             if (!enrolled) {
                 Text("الأسهل: اربطه من تطبيقك الحالي. يطلع لك رمز هنا، وتوافق عليه ببصمتك في سيرفري الحالي (الطلبات الإدارية).", style = MaterialTheme.typography.bodySmall)
                 Button(onClick = { linkCode = null; run({ enrollMsg = it; linkCode = null }) { link { c -> linkCode = c } } }, enabled = !busy) { Text("اربط من تطبيقك الحالي") }
-                linkCode?.let { c ->
+                linkCode?.let { full ->
+                    val c = full.substringBefore("|")
+                    full.substringAfter("|", "").takeIf { it.isNotBlank() }?.let { Text("رقم الطلب: $it (نفسه في Chrome)", style = MaterialTheme.typography.bodySmall) }
                     // الرمز من اليسار لليمين وبدون مسافة: في الواجهة العربية المسافة كانت تقلب ترتيب النصّين
                     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr) {
                         Text(c, style = MaterialTheme.typography.displaySmall.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr, letterSpacing = androidx.compose.ui.unit.TextUnit(6f, androidx.compose.ui.unit.TextUnitType.Sp)), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
