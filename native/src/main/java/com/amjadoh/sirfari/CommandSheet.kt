@@ -52,7 +52,11 @@ fun CommandSheet(api: Api, actions: Actions, onClose: () -> Unit, onSent: () -> 
         delay(350)
         preview = runCatching { api.post("/api/command/preview", JSONObject().put("text", text.trim())) }.getOrNull()
     }
-    LaunchedEffect(Unit) { sessions = runCatching { api.get("/api/sessions") }.getOrNull() }
+    var history by remember { mutableStateOf<org.json.JSONArray?>(null) }
+    LaunchedEffect(Unit) {
+        sessions = runCatching { api.get("/api/sessions") }.getOrNull()
+        history = runCatching { api.get("/api/commands").optJSONArray("commands") }.getOrNull()
+    }
 
     fun run(block: suspend () -> String) {
         if (busy) return
@@ -107,6 +111,19 @@ fun CommandSheet(api: Api, actions: Actions, onClose: () -> Unit, onSent: () -> 
             }
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             msg?.let { (ok, m) -> Text(m, color = if (ok) Tone.ok else MaterialTheme.colorScheme.error) }
+
+            history?.takeIf { it.length() > 0 }?.let { h ->
+                HorizontalDivider()
+                Text("آخر أوامرك", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                for (i in 0 until minOf(h.length(), 5)) {
+                    val c = h.optJSONObject(i) ?: continue
+                    val (label, tone) = when (c.optString("state")) { "done" -> "انفتح" to Tone.ok; "pending" -> "ينتظر" to Tone.run; else -> "ما انرسل" to Tone.bad }
+                    StatusLine(tone, c.optString("text").take(80), label)
+                    c.optString("detail").takeIf { it.isNotBlank() && it != "null" && c.optString("state") != "done" }?.let {
+                        Text(it.take(160), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
 
             sessions?.takeIf { it.optBoolean("installed") }?.let { s ->
                 HorizontalDivider()

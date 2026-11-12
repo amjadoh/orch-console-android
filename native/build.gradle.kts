@@ -9,17 +9,21 @@ plugins {
 val keystorePath: String? = System.getenv("ORCH_KEYSTORE_PATH")
 val keystorePassword: String? = System.getenv("ORCH_KEYSTORE_PASSWORD")
 val runNumber: Int = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+// التبديل (بموافقة أمجد بس): نفس الكود بحزمة التطبيق المثبت com.amjadoh.orch ورقم أعلى من TWA،
+// فيتحدّث فوقه. والرجوع: TWA برقم أعلى منه. البناء العادي دايم بالحزمة التجريبية.
+val cutover: Boolean = (project.findProperty("cutover") as String?) == "true"
 
 android {
     namespace = "com.amjadoh.sirfari"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.amjadoh.orch.next"
+        applicationId = if (cutover) "com.amjadoh.orch" else "com.amjadoh.orch.next"
         minSdk = 30 // مفاتيح البصمة القوية (setUserAuthenticationParameters) من أندرويد 11
         targetSdk = 35
-        versionCode = runNumber
-        versionName = "0.1.0-dev.$runNumber"
+        versionCode = if (cutover) (project.findProperty("versionCode") as String).toInt() else runNumber
+        versionName = if (cutover) project.findProperty("versionName") as String else "0.1.0-dev.$runNumber"
+        resValue("string", "app_name", if (cutover) "سيرفري" else "سيرفري (تجريبي)")
     }
 
     signingConfigs {
