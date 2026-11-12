@@ -133,6 +133,38 @@ class MainActivity : FragmentActivity() {
         return "انسجل الجوال ✓ (المفتاح داخل الجوال وما يطلع منه)"
     }
 
+    /** ربط بدون رمز root: نسجّل مفتاح الجوال، ويطلع رمز، وتوافق ببصمتك من تطبيقك الحالي */
+    private suspend fun link(onCode: (String) -> Unit): String {
+        val opts = api.post("/api/link/options", JSONObject())
+        val linkId = opts.getString("linkId")
+        val challenge = opts.getJSONObject("publicKey").getString("challenge")
+        val (publicKey, credId) = device.create()
+        val cd = WebAuthnShape.clientData("webauthn.create", challenge, appOrigin, packageName)
+        val ad = WebAuthnShape.authData(Api.RP_ID, 0, credId)
+        val id = WebAuthnShape.b64u(credId)
+        val credential = JSONObject()
+            .put("id", id).put("rawId", id).put("type", "public-key")
+            .put("response", JSONObject()
+                .put("clientDataJSON", WebAuthnShape.b64u(cd))
+                .put("authenticatorData", WebAuthnShape.b64u(ad))
+                .put("publicKey", WebAuthnShape.b64u(publicKey.encoded))
+                .put("publicKeyAlgorithm", WebAuthnShape.ALG_ES256))
+        val code = try {
+            api.post("/api/link/register", JSONObject().put("linkId", linkId).put("label", "سيرفري الأصلي").put("credential", credential)).getString("code")
+        } catch (e: Exception) { device.forget(); throw e }
+        onCode(code)
+        repeat(200) { // 10 دقايق
+            kotlinx.coroutines.delay(3000)
+            val st = runCatching { api.get("/api/link/status?id=$linkId").optString("state") }.getOrNull() ?: return@repeat
+            when (st) {
+                "done" -> { device.saveEnrollment(credId); return "انربط الجوال ✓ (المفتاح داخل الجوال وما يطلع منه)" }
+                "gone" -> { device.forget(); throw Api.Failure("طلب الربط انرفض أو انتهى. جرّب مرة ثانية") }
+            }
+        }
+        device.forget()
+        throw Api.Failure("انتهت مهلة الربط. جرّب مرة ثانية")
+    }
+
     private suspend fun testFingerprint(): String {
         val id = device.credentialId ?: throw Api.Failure("سجّل الجوال أول")
         val opts = api.post("/api/passkey/test/options", JSONObject())
@@ -168,6 +200,7 @@ class MainActivity : FragmentActivity() {
         var busy by remember { mutableStateOf(false) }
         var enrolled by remember { mutableStateOf(device.enrolled) }
         var code by remember { mutableStateOf("") }
+        var linkCode by remember { mutableStateOf<String?>(null) }
 
         fun run(set: (Pair<Boolean, String>) -> Unit, block: suspend () -> String) {
             if (busy) return
@@ -187,7 +220,13 @@ class MainActivity : FragmentActivity() {
 
         Section("٢. تسجيل الجوال", enrollMsg ?: if (enrolled) true to "الجوال مسجّل ✓" else null) {
             if (!enrolled) {
-                Text("يحتاج رمز تسجيل لمرة وحدة من root (نفس تسجيل أي جهاز).", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                Text("الأسهل: اربطه من تطبيقك الحالي. يطلع لك رمز هنا، وتوافق عليه ببصمتك في سيرفري الحالي (الطلبات الإدارية).", style = MaterialTheme.typography.bodySmall)
+                Button(onClick = { linkCode = null; run({ enrollMsg = it; linkCode = null }) { link { c -> linkCode = c } } }, enabled = !busy) { Text("اربط من تطبيقك الحالي") }
+                linkCode?.let { c ->
+                    Text(c.chunked(3).joinToString(" "), style = MaterialTheme.typography.displaySmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text("افتح سيرفري الحالي ← تلقى «📱 جهاز جديد يبي يرتبط»، وتأكد إن الرمز نفسه، ووافق بالبصمة. أنتظرك هنا…", style = MaterialTheme.typography.bodySmall)
+                }
+                Text("أو برمز تسجيل من root:", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(
                     value = code, onValueChange = { code = it.uppercase().take(11) }, singleLine = true,
                     label = { Text("رمز التسجيل") }, modifier = Modifier.fillMaxWidth(),
