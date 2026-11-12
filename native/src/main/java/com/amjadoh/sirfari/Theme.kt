@@ -31,9 +31,10 @@ private val Dark = darkColorScheme(
 )
 
 
+/** dark = null: يتبع الجوال (للاختبارات). التطبيق يمرر اختيار أمجد (الداكن الافتراضي مثل سيرفري القديم). */
 @Composable
-fun SirfariTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = if (isSystemInDarkTheme()) Dark else Light) {
+fun SirfariTheme(dark: Boolean? = null, content: @Composable () -> Unit) {
+    MaterialTheme(colorScheme = if (dark ?: isSystemInDarkTheme()) Dark else Light) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl, content = content)
     }
 }

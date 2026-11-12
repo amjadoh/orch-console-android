@@ -57,7 +57,7 @@ private const val REFRESH_MS = 20_000L
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SirfariApp(repo: Repo, api: Api, actions: Actions, openTask: androidx.compose.runtime.MutableState<String?>, fingerprint: @Composable () -> Unit) {
+fun SirfariApp(repo: Repo, api: Api, actions: Actions, openTask: androidx.compose.runtime.MutableState<String?>, dark: Boolean = true, onToggleDark: () -> Unit = {}, fingerprint: @Composable () -> Unit) {
     var tab by rememberSaveable { mutableStateOf(Tab.Home) }
     var showKey by rememberSaveable { mutableStateOf(false) }
     var overview by remember { mutableStateOf<Repo.Result<Overview>?>(null) }
@@ -116,6 +116,7 @@ fun SirfariApp(repo: Repo, api: Api, actions: Actions, openTask: androidx.compos
                 TopAppBar(
                     title = { Text(if (showKey) "البصمة" else tab.label, fontWeight = FontWeight.SemiBold) },
                     actions = {
+                        IconButton(onClick = onToggleDark) { Text(if (dark) "☀️" else "🌙") }
                         IconButton(onClick = { showKey = !showKey }) { Icon(SirfariIcons.Key, contentDescription = "البصمة") }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),

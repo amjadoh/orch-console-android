@@ -54,13 +54,15 @@ class MainActivity : FragmentActivity() {
         Inbox.channels(this)
         Inbox.schedule(this)
         openTask.value = intent?.getStringExtra(Inbox.EXTRA_TASK)
+        val prefs = getSharedPreferences("ui", MODE_PRIVATE)
         setContent {
-            SirfariTheme {
+            var dark by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(prefs.getBoolean("dark", true)) }
+            SirfariTheme(dark) {
                 val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {}
                 androidx.compose.runtime.LaunchedEffect(Unit) {
                     if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) ask.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                 }
-                SirfariApp(repo, api, actions, openTask) { FingerprintScreen() }
+                SirfariApp(repo, api, actions, openTask, dark = dark, onToggleDark = { dark = !dark; prefs.edit().putBoolean("dark", dark).apply() }) { FingerprintScreen() }
             }
         }
     }
