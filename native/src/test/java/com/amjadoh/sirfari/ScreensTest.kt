@@ -116,6 +116,24 @@ class ScreensTest {
         rule.onNodeWithText("وافق بالبصمة").assertIsDisplayed()
     }
 
+    @Test @Config(qualifiers = "w840dp-h900dp-xhdpi-night")
+    fun shellOpenedDark() {
+        // هيكل التطبيق كامل (بدون سيرفر: يطلع «ما وصلت»)، والتحديث الدوري ما نخليه يدور في الاختبار
+        rule.mainClock.autoAdvance = false
+        val a = actions()
+        val api = Api("http://127.0.0.1:9")
+        val repo = Repo(rule.activity, api)
+        rule.setContent { SirfariTheme { SirfariApp(repo, api, a, androidx.compose.runtime.mutableStateOf(null)) {} } }
+        rule.mainClock.advanceTimeBy(500)
+        Thread.sleep(1500) // الطلب يفشل على IO
+        rule.mainClock.advanceTimeBy(500)
+        val v = rule.activity.window.decorView
+        val bmp = Bitmap.createBitmap(v.width, v.height, Bitmap.Config.ARGB_8888).also { v.draw(Canvas(it)) }
+        File("build/shots").mkdirs()
+        FileOutputStream(File("build/shots/shell-840-dark.png")).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        rule.onNodeWithText("المخرجات").assertIsDisplayed()
+    }
+
     @Test @Config(qualifiers = "w411dp-h891dp-xxhdpi")
     fun chartRenders() {
         val pts = (0 until 60).map { Point(now - (60 - it) * 60_000L, 20.0 + (it % 10) * 3, 50.0 + (it % 7)) }
