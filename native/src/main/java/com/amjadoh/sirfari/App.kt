@@ -136,7 +136,8 @@ fun SirfariApp(repo: Repo, api: Api, actions: Actions, fingerprint: @Composable 
                                 onCommand = { showCommand = true }, onChanged = { scope.launch { refresh() } },
                             )
                             tab == Tab.Server -> ServerScreen(server, now)
-                            else -> Later(tab)
+                            tab == Tab.Space -> SpaceScreen(api)
+                            else -> FilesScreen(api)
                         }
                     }
                 }
@@ -144,13 +145,4 @@ fun SirfariApp(repo: Repo, api: Api, actions: Actions, fingerprint: @Composable 
         }
     }
     if (showCommand) CommandSheet(api, actions, onClose = { showCommand = false }, onSent = { scope.launch { refresh() } })
-}
-
-@Composable
-private fun Later(tab: Tab) {
-    val phase = "المرحلة 3"
-    Panel(tab.label) {
-        Text("هذي الشاشة تنبني في $phase من النسخة الأصلية. للحين استخدمها من تطبيق سيرفري الحالي.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
 }
