@@ -77,6 +77,7 @@ private fun FileList(api: Api, root: String, label: String, onBack: () -> Unit) 
     var data by remember(root, group) { mutableStateOf<JSONObject?>(null) }
     var groups by remember(root) { mutableStateOf<List<String>>(emptyList()) }
     var note by remember { mutableStateOf<String?>(null) }
+    var playing by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(root, group) {
         val q = "/files/api/list?root=${URLEncoder.encode(root, "UTF-8")}&limit=60" + (group?.let { "&group=${URLEncoder.encode(it, "UTF-8")}" } ?: "")
         data = runCatching { api.get(q) }.getOrNull()
@@ -86,6 +87,7 @@ private fun FileList(api: Api, root: String, label: String, onBack: () -> Unit) 
             } ?: emptyList()
         }
     }
+    playing?.let { VideoDialog(it) { playing = null } }
     TextButton(onClick = onBack) { Text("→ كل المخرجات") }
     if (groups.size > 1) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         FilterChip(selected = group == null, onClick = { group = null }, label = { Text("الكل") })
@@ -101,7 +103,8 @@ private fun FileList(api: Api, root: String, label: String, onBack: () -> Unit) 
             val type = f.optString("type")
             Row(
                 Modifier.fillMaxWidth().clickable {
-                    if (type == "video" || type == "image") open(ctx, url)
+                    if (type == "video") playing = url
+                    else if (type == "image") open(ctx, url)
                     else { download(ctx, url, f.optString("name")); note = "ينزل ${f.optString("name")} (شوف الإشعارات)" }
                 }.padding(vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),

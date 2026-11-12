@@ -134,12 +134,14 @@ fun SirfariApp(repo: Repo, api: Api, actions: Actions, openTask: androidx.compos
                     ) {
                         when {
                             showKey -> fingerprint()
-                            tab == Tab.Home -> HomeScreen(overview, now, openServer = { tab = Tab.Server }, openTask = { selectedTask = it; tab = Tab.Tasks })
+                            tab == Tab.Home -> HomeScreen(overview, now, openServer = { tab = Tab.Server }, openTask = { selectedTask = it; tab = Tab.Tasks }) {
+                                ProjectsSection(api) { selectedTask = it; tab = Tab.Tasks }
+                            }
                             tab == Tab.Tasks -> TasksScreen(
                                 overview, admin, now, selectedTask, { selectedTask = it }, api, actions,
                                 onCommand = { showCommand = true }, onChanged = { scope.launch { refresh() } },
                             )
-                            tab == Tab.Server -> ServerScreen(server, now)
+                            tab == Tab.Server -> ServerScreen(server, now) { DiagnosisSection(api) { scope.launch { refresh() } } }
                             tab == Tab.Space -> SpaceScreen(api)
                             else -> FilesScreen(api)
                         }

@@ -116,6 +116,13 @@ class ScreensTest {
         rule.onNodeWithText("وافق بالبصمة").assertIsDisplayed()
     }
 
+    @Test @Config(qualifiers = "w411dp-h891dp-xxhdpi")
+    fun chartRenders() {
+        val pts = (0 until 60).map { Point(now - (60 - it) * 60_000L, 20.0 + (it % 10) * 3, 50.0 + (it % 7)) }
+        screen("chart-411") { HistoryChart(pts) }
+        rule.onNodeWithText("آخر ساعة").assertIsDisplayed()
+    }
+
     @Test @Config(qualifiers = "w840dp-h900dp-xhdpi")
     fun tasksOpened() {
         val a = actions()

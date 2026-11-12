@@ -28,7 +28,9 @@ data class ServerView(
     val at: Long?, val hostName: String?, val cpuPct: Double?, val load: List<Double>, val uptimeSec: Long?,
     val mem: Mem?, val disks: List<Disk>, val services: List<Service>, val containers: List<Container>,
     val timers: List<Timer>, val alerts: List<Alert>, val consumers: List<Consumer>, val tailscaleOnline: Boolean?,
+    val history: List<Point> = emptyList(),
 )
+data class Point(val at: Long, val cpu: Double?, val mem: Double?)
 
 private fun JSONObject.str(k: String) = if (has(k) && !isNull(k)) optString(k) else null
 private fun JSONObject.num(k: String) = if (has(k) && !isNull(k)) optDouble(k).takeIf { !it.isNaN() } else null
@@ -69,6 +71,7 @@ object Models {
             alerts = o.optJSONArray("alerts").items { Alert(it.optString("level"), it.optString("text")) },
             consumers = host.optJSONArray("consumers").items { Consumer(it.optString("label"), it.optDouble("rssMb"), it.optBoolean("protected")) },
             tailscaleOnline = host.optJSONObject("tailscale")?.optBoolean("online"),
+            history = srv?.optJSONArray("history").items { p -> p.num("at")?.let { Point(it.toLong(), p.num("cpu"), p.num("mem")) } },
         )
     }
 }

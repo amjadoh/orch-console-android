@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 private val GROUPS = listOf("orch" to "المنظّم وسيرفري", "bots" to "البوتات", "infra" to "البنية")
 
 @Composable
-fun ServerScreen(r: Repo.Result<ServerView>?, now: Long) {
+fun ServerScreen(r: Repo.Result<ServerView>?, now: Long, extra: @Composable () -> Unit = {}) {
     FreshnessBar(r, now)
     val s = r?.data ?: return
     if (s.at == null) { Panel { Text("ما فيه بيانات من جامع السيرفر للحين") }; return }
@@ -39,6 +39,9 @@ fun ServerScreen(r: Repo.Result<ServerView>?, now: Long) {
         }
         Text(extra.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+
+    HistoryChart(s.history)
+    extra()
 
     if (s.alerts.isNotEmpty()) Panel("التنبيهات") { s.alerts.forEach { StatusLine(Tone.level(it.level), it.text) } }
 

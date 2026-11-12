@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun HomeScreen(r: Repo.Result<Overview>?, now: Long, openServer: () -> Unit, openTask: (String) -> Unit) {
+fun HomeScreen(r: Repo.Result<Overview>?, now: Long, openServer: () -> Unit, openTask: (String) -> Unit, extra: @Composable () -> Unit = {}) {
     FreshnessBar(r, now)
     val o = r?.data ?: return
     val (color, headline) = when (o.healthLevel) {
@@ -54,6 +54,7 @@ fun HomeScreen(r: Repo.Result<Overview>?, now: Long, openServer: () -> Unit, ope
     if (running.isNotEmpty()) Panel("شغالة الحين") {
         running.forEach { t -> Column(Modifier.clickable { openTask(t.taskId) }) { StatusLine(Tone.run, t.title.ifBlank { t.taskId }, t.projectId) } }
     }
+    extra()
 }
 
 @Composable
