@@ -223,7 +223,10 @@ class MainActivity : FragmentActivity() {
                 Text("الأسهل: اربطه من تطبيقك الحالي. يطلع لك رمز هنا، وتوافق عليه ببصمتك في سيرفري الحالي (الطلبات الإدارية).", style = MaterialTheme.typography.bodySmall)
                 Button(onClick = { linkCode = null; run({ enrollMsg = it; linkCode = null }) { link { c -> linkCode = c } } }, enabled = !busy) { Text("اربط من تطبيقك الحالي") }
                 linkCode?.let { c ->
-                    Text(c.chunked(3).joinToString(" "), style = MaterialTheme.typography.displaySmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    // الرمز من اليسار لليمين وبدون مسافة: في الواجهة العربية المسافة كانت تقلب ترتيب النصّين
+                    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr) {
+                        Text(c, style = MaterialTheme.typography.displaySmall.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr, letterSpacing = androidx.compose.ui.unit.TextUnit(6f, androidx.compose.ui.unit.TextUnitType.Sp)), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    }
                     Text("افتح سيرفري الحالي ← تلقى «📱 جهاز جديد يبي يرتبط»، وتأكد إن الرمز نفسه، ووافق بالبصمة. أنتظرك هنا…", style = MaterialTheme.typography.bodySmall)
                 }
                 Text("أو برمز تسجيل من root:", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
