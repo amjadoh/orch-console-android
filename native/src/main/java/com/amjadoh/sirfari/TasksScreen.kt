@@ -68,7 +68,7 @@ fun TasksScreen(
 }
 
 @Composable
-private fun TaskList(
+internal fun TaskList(
     r: Repo.Result<Overview>?, admin: JSONObject?, now: Long, selected: String?, onSelect: (String?) -> Unit,
     actions: Actions, onCommand: () -> Unit, onChanged: () -> Unit,
 ) {
@@ -146,6 +146,13 @@ private fun TaskDetailPane(taskId: String, api: Api, actions: Actions, now: Long
 
     err?.let { Panel { Text(it, color = MaterialTheme.colorScheme.error) } }
     val d = t ?: return
+    TaskDetailBody(d, actions, onSelect, onHold = { hold = it }, onDone = { reload++; onChanged() })
+}
+
+/** محتوى صفحة المهمة (منفصل عن التحميل عشان ينختبر ويتصوّر) */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun TaskDetailBody(d: TaskDetail, actions: Actions, onSelect: (String?) -> Unit, onHold: (Boolean) -> Unit, onDone: () -> Unit) {
     val (label, color) = statusOf(d.status)
     val uri = LocalUriHandler.current
 
@@ -196,7 +203,7 @@ private fun TaskDetailPane(taskId: String, api: Api, actions: Actions, now: Long
 
     d.summary?.let { s -> Panel("الخلاصة") { Text(s) } }
 
-    Decisions(d, actions, onHold = { hold = it }, onDone = { reload++; onChanged() })
+    Decisions(d, actions, onHold = onHold, onDone = onDone)
 
     if (d.status == "awaiting" || d.status == "running") ContinueYourself(d)
 }
