@@ -37,8 +37,11 @@ import java.util.Locale
 private fun icon(type: String) = when (type) { "video" -> "🎬"; "image" -> "🖼️"; "pdf" -> "📄"; "apk" -> "📦"; else -> "📎" }
 private val dateFmt = SimpleDateFormat("d MMM yyyy", Locale("ar"))
 
-/** المخرجات: كل مخرجات شغلك (فيديو، صور، PDF، APK…) من خدمة الملفات (قراءة بس). الفيديو والصور تنفتح، والباقي ينزل. */
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * المخرجات (طلب أمجد): مخرجات مو كل الملفات.
+ * - مشروع فيه فيديوهات: كل الفيديوهات والصور (تدخل عليه وتشغّلها).
+ * - باقي المشاريع: آخر إصدار بس (أحدث APK، ولو ما فيه فأحدث ملف)، وينزل بضغطة.
+ */
 @Composable
 fun FilesScreen(api: Api) {
     var root by rememberSaveable { mutableStateOf<String?>(null) }
@@ -52,20 +55,60 @@ fun FilesScreen(api: Api) {
     err?.let { Panel { Text(it, color = MaterialTheme.colorScheme.error) } }
     if (root != null) { FileList(api, root!!, rootLabel) { root = null }; return }
     val list = roots ?: return
-    if (list.isEmpty()) { Panel { Text("ما فيه مخرجات للحين") }; return }
-    Panel("مخرجاتك") {
-        list.forEach { r ->
+    val media = list.filter { isMedia(it) }
+    val releases = list.filter { !isMedia(it) && it.optInt("count") > 0 }
+    if (media.isEmpty() && releases.isEmpty()) { Panel { Text("ما فيه مخرجات للحين") }; return }
+    if (media.isNotEmpty()) Panel("فيديوهات وصور") {
+        media.forEach { r ->
+            val t = r.optJSONObject("types")
             Row(
                 Modifier.fillMaxWidth().clickable { root = r.optString("id"); rootLabel = r.optString("label") }.padding(vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text(icon(r.optString("icon")))
+                Text("🎬")
                 Column(Modifier.weight(1f)) {
                     Text(r.optString("label"))
-                    Text("${r.optInt("count")} ملف · ${size(r.optDouble("bytes"))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(listOfNotNull(t?.optInt("video")?.takeIf { it > 0 }?.let { "$it فيديو" }, t?.optInt("image")?.takeIf { it > 0 }?.let { "$it صورة" }).joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                Text("‹", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+    }
+    if (releases.isNotEmpty()) Panel("آخر إصدار لكل مشروع") {
+        releases.forEach { r -> LatestRelease(api, r) }
+    }
+}
+
+private fun isMedia(r: JSONObject) = (r.optJSONObject("types")?.optInt("video") ?: 0) > 0
+
+@Composable
+private fun LatestRelease(api: Api, r: JSONObject) {
+    val ctx = LocalContext.current
+    val id = r.optString("id")
+    val hasApk = (r.optJSONObject("types")?.optInt("apk") ?: 0) > 0
+    var f by remember(id) { mutableStateOf<JSONObject?>(null) }
+    var note by remember(id) { mutableStateOf<String?>(null) }
+    LaunchedEffect(id) {
+        f = runCatching { api.get("/files/api/list?root=${URLEncoder.encode(id, "UTF-8")}&limit=1" + if (hasApk) "&type=apk" else "").optJSONArray("files")?.optJSONObject(0) }.getOrNull()
+    }
+    val file = f
+    Row(
+        Modifier.fillMaxWidth().clickable(enabled = file != null) {
+            file ?: return@clickable
+            download(ctx, "${Api.BASE}/files/f/$id/${file.optString("id")}", file.optString("name"))
+            note = "ينزل… (شوف الإشعارات)"
+        }.padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(icon(file?.optString("type") ?: r.optString("icon")))
+        Column(Modifier.weight(1f)) {
+            Text(r.optString("label"))
+            Text(file?.let { listOf(it.optString("name"), size(it.optDouble("size")), dateFmt.format(Date(it.optLong("mtime")))).joinToString(" · ") } ?: "…",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+            note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Tone.ok) }
+        }
+        if (file != null) Text("⬇", color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -95,8 +138,9 @@ private fun FileList(api: Api, root: String, label: String, onBack: () -> Unit) 
     }
     note?.let { Text(it, color = Tone.ok, style = MaterialTheme.typography.bodySmall) }
     val d = data ?: return
-    val files = d.optJSONArray("files")
-    Panel("$label (${d.optInt("total")})") {
+    val all = d.optJSONArray("files")
+    val files = org.json.JSONArray((0 until (all?.length() ?: 0)).mapNotNull { all!!.optJSONObject(it) }.filter { it.optString("type") == "video" || it.optString("type") == "image" })
+    Panel("$label (${files.length()})") {
         for (i in 0 until (files?.length() ?: 0)) {
             val f = files!!.optJSONObject(i) ?: continue
             val url = "${Api.BASE}/files/f/$root/${f.optString("id")}"

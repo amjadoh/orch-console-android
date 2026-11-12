@@ -99,6 +99,7 @@ fun SirfariApp(repo: Repo, api: Api, actions: Actions, openTask: androidx.compos
     }
 
     NavigationSuiteScaffold(
+        layoutType = androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType.NavigationBar, // تحت دايم (طلب أمجد)، حتى والجوال مفتوح
         navigationSuiteItems = {
             Tab.entries.forEach { t ->
                 item(
