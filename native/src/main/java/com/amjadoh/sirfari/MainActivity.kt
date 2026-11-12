@@ -42,6 +42,7 @@ class MainActivity : FragmentActivity() {
     private val api = Api()
     private lateinit var device: DeviceKey
     private lateinit var appOrigin: String
+    private val openTask = androidx.compose.runtime.mutableStateOf<String?>(null) // من الإشعار
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -50,7 +51,23 @@ class MainActivity : FragmentActivity() {
         appOrigin = WebAuthnShape.originFor(signingCert())
         val repo = Repo(this, api)
         val actions = Actions(api, Signer(this, device, appOrigin), device)
-        setContent { SirfariTheme { SirfariApp(repo, api, actions) { FingerprintScreen() } } }
+        Inbox.channels(this)
+        Inbox.schedule(this)
+        openTask.value = intent?.getStringExtra(Inbox.EXTRA_TASK)
+        setContent {
+            SirfariTheme {
+                val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {}
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) ask.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+                SirfariApp(repo, api, actions, openTask) { FingerprintScreen() }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        intent.getStringExtra(Inbox.EXTRA_TASK)?.let { openTask.value = it }
     }
 
     private fun signingCert(): ByteArray {

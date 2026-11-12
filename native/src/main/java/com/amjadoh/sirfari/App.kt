@@ -57,7 +57,7 @@ private const val REFRESH_MS = 20_000L
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SirfariApp(repo: Repo, api: Api, actions: Actions, fingerprint: @Composable () -> Unit) {
+fun SirfariApp(repo: Repo, api: Api, actions: Actions, openTask: androidx.compose.runtime.MutableState<String?>, fingerprint: @Composable () -> Unit) {
     var tab by rememberSaveable { mutableStateOf(Tab.Home) }
     var showKey by rememberSaveable { mutableStateOf(false) }
     var overview by remember { mutableStateOf<Repo.Result<Overview>?>(null) }
@@ -68,6 +68,10 @@ fun SirfariApp(repo: Repo, api: Api, actions: Actions, fingerprint: @Composable 
     var refreshing by remember { mutableStateOf(false) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val scope = rememberCoroutineScope()
+    // فتح مهمة من الإشعار
+    LaunchedEffect(openTask.value) {
+        openTask.value?.let { selectedTask = it; tab = Tab.Tasks; showKey = false; openTask.value = null }
+    }
 
     suspend fun refresh() {
         overview = repo.load("/api/overview", Models::overview)
