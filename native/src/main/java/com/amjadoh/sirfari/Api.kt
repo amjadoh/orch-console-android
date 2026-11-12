@@ -43,7 +43,9 @@ class Api(private val base: String = BASE) {
                 json ?: throw Failure("رد غير متوقع من السيرفر")
             }
         } catch (e: IOException) {
-            throw Failure("ما وصلت للسيرفر. تأكد إن Tailscale شغّال")
+            // السبب الفعلي معه (اسم الخطأ وأول سطر)، عشان نعرف وش صاير بدل رسالة عامة
+            val why = listOfNotNull(e.javaClass.simpleName, e.message?.take(120)).joinToString(": ")
+            throw Failure("ما وصلت للسيرفر. تأكد إن Tailscale شغّال\n($why)")
         }
     }
 
