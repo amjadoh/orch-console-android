@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun HomeScreen(r: Repo.Result<Overview>?, now: Long, openServer: () -> Unit) {
+fun HomeScreen(r: Repo.Result<Overview>?, now: Long, openServer: () -> Unit, openTask: (String) -> Unit) {
     FreshnessBar(r, now)
     val o = r?.data ?: return
     val (color, headline) = when (o.healthLevel) {
@@ -46,14 +46,13 @@ fun HomeScreen(r: Repo.Result<Overview>?, now: Long, openServer: () -> Unit) {
 
     val waiting = o.tasks.filter { it.status == "awaiting" }
     if (waiting.isNotEmpty() || o.adminPending > 0) Panel("تنتظر موافقتك") {
-        waiting.forEach { t -> StatusLine(Tone.warn, t.title.ifBlank { t.taskId }, t.projectId) }
-        if (o.adminPending > 0) StatusLine(Tone.warn, "طلبات إدارية (root): ${o.adminPending}")
-        Text("الموافقة من النسخة الأصلية تجي في المرحلة 2. للحين وافق من التطبيق الحالي.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        waiting.forEach { t -> Column(Modifier.clickable { openTask(t.taskId) }) { StatusLine(Tone.warn, t.title.ifBlank { t.taskId }, t.projectId) } }
+        if (o.adminPending > 0) StatusLine(Tone.warn, "طلبات إدارية (root): ${o.adminPending} · في تبويب المهام")
     }
 
     val running = o.tasks.filter { it.status == "running" }
     if (running.isNotEmpty()) Panel("شغالة الحين") {
-        running.forEach { t -> StatusLine(Tone.run, t.title.ifBlank { t.taskId }, t.projectId) }
+        running.forEach { t -> Column(Modifier.clickable { openTask(t.taskId) }) { StatusLine(Tone.run, t.title.ifBlank { t.taskId }, t.projectId) } }
     }
 }
 

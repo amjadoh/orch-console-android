@@ -49,4 +49,23 @@ class ModelsTest {
         val s = Models.server(JSONObject("""{"server":null,"docker":null,"alerts":[{"level":"bad","text":"ما فيه بيانات"}]}"""))
         assertNull(s.at); assertNull(s.mem); assertEquals(1, s.alerts.size)
     }
+
+    @Test
+    fun taskDecisionsFollowWebRules() {
+        val t = Models.task(JSONObject("""
+            {"taskId":"MSR-0002","projectId":"masroof","title":"x","status":"awaiting","first":"Claude","second":"Codex","request":"r",
+             "plan":{"summary":"s","steps":["a","b"],"files":["app/A.kt"],"risks":[],"planner":"Claude"},
+             "planState":"ready","planPending":false,"planRevising":false,"revisionsLeft":3,
+             "attempts":{"attempt":1,"total":1,"max":3,"next":null},
+             "activity":{"at":1,"live":true,"agent":"Claude","items":[{"kind":"edit","tool":"Edit","path":"app/A.kt","cmd":null}]}}
+        """))
+        assertTrue(t.planReady); assertTrue(t.canRevise); assertTrue(t.canSwap)
+        assertEquals(2, t.plan!!.steps.size); assertEquals("app/A.kt", t.activity!!.items.single().path)
+        val pending = Models.task(JSONObject("""{"taskId":"A-0001","status":"awaiting","planState":"running","planPending":true,"revisionsLeft":3}"""))
+        assertTrue(!pending.planReady && !pending.canRevise && !pending.canSwap)
+        val failed = Models.task(JSONObject("""{"taskId":"A-0001","status":"failed","attempts":{"total":1,"max":3,"next":null}}"""))
+        assertTrue(failed.canRetry)
+        val last = Models.task(JSONObject("""{"taskId":"A-0001","status":"failed","attempts":{"total":3,"max":3,"next":null}}"""))
+        assertTrue(!last.canRetry)
+    }
 }

@@ -49,7 +49,8 @@ class MainActivity : FragmentActivity() {
         device = DeviceKey(this)
         appOrigin = WebAuthnShape.originFor(signingCert())
         val repo = Repo(this, api)
-        setContent { SirfariTheme { SirfariApp(repo) { FingerprintScreen() } } }
+        val actions = Actions(api, Signer(this, device, appOrigin), device)
+        setContent { SirfariTheme { SirfariApp(repo, api, actions) { FingerprintScreen() } } }
     }
 
     private fun signingCert(): ByteArray {

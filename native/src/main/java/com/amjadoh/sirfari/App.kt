@@ -57,11 +57,14 @@ private const val REFRESH_MS = 20_000L
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SirfariApp(repo: Repo, fingerprint: @Composable () -> Unit) {
+fun SirfariApp(repo: Repo, api: Api, actions: Actions, fingerprint: @Composable () -> Unit) {
     var tab by rememberSaveable { mutableStateOf(Tab.Home) }
     var showKey by rememberSaveable { mutableStateOf(false) }
     var overview by remember { mutableStateOf<Repo.Result<Overview>?>(null) }
     var server by remember { mutableStateOf<Repo.Result<ServerView>?>(null) }
+    var admin by remember { mutableStateOf<org.json.JSONObject?>(null) }
+    var selectedTask by rememberSaveable { mutableStateOf<String?>(null) }
+    var showCommand by rememberSaveable { mutableStateOf(false) }
     var refreshing by remember { mutableStateOf(false) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val scope = rememberCoroutineScope()
@@ -69,6 +72,7 @@ fun SirfariApp(repo: Repo, fingerprint: @Composable () -> Unit) {
     suspend fun refresh() {
         overview = repo.load("/api/overview", Models::overview)
         if (tab == Tab.Server || server == null) server = repo.load("/api/server", Models::server)
+        if (tab == Tab.Tasks || tab == Tab.Home) admin = runCatching { api.get("/api/admin") }.getOrNull() ?: admin
         now = System.currentTimeMillis()
     }
 
@@ -82,7 +86,13 @@ fun SirfariApp(repo: Repo, fingerprint: @Composable () -> Unit) {
         }
     }
 
-    BackHandler(enabled = showKey || tab != Tab.Home) { if (showKey) showKey = false else tab = Tab.Home }
+    BackHandler(enabled = showKey || tab != Tab.Home || selectedTask != null) {
+        when {
+            showKey -> showKey = false
+            tab == Tab.Tasks && selectedTask != null -> selectedTask = null
+            else -> tab = Tab.Home
+        }
+    }
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
@@ -115,12 +125,16 @@ fun SirfariApp(repo: Repo, fingerprint: @Composable () -> Unit) {
             ) {
                 Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.TopCenter) {
                     Column(
-                        Modifier.widthIn(max = 720.dp).fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                        Modifier.widthIn(max = if (tab == Tab.Tasks && !showKey) 1100.dp else 720.dp).fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         when {
                             showKey -> fingerprint()
-                            tab == Tab.Home -> HomeScreen(overview, now) { tab = Tab.Server }
+                            tab == Tab.Home -> HomeScreen(overview, now, openServer = { tab = Tab.Server }, openTask = { selectedTask = it; tab = Tab.Tasks })
+                            tab == Tab.Tasks -> TasksScreen(
+                                overview, admin, now, selectedTask, { selectedTask = it }, api, actions,
+                                onCommand = { showCommand = true }, onChanged = { scope.launch { refresh() } },
+                            )
                             tab == Tab.Server -> ServerScreen(server, now)
                             else -> Later(tab)
                         }
@@ -129,11 +143,12 @@ fun SirfariApp(repo: Repo, fingerprint: @Composable () -> Unit) {
             }
         }
     }
+    if (showCommand) CommandSheet(api, actions, onClose = { showCommand = false }, onSent = { scope.launch { refresh() } })
 }
 
 @Composable
 private fun Later(tab: Tab) {
-    val phase = when (tab) { Tab.Tasks -> "المرحلة 2"; else -> "المرحلة 3" }
+    val phase = "المرحلة 3"
     Panel(tab.label) {
         Text("هذي الشاشة تنبني في $phase من النسخة الأصلية. للحين استخدمها من تطبيق سيرفري الحالي.",
             color = MaterialTheme.colorScheme.onSurfaceVariant)

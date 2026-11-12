@@ -72,3 +72,45 @@ object Models {
         )
     }
 }
+
+data class Plan(val summary: String, val steps: List<String>, val files: List<String>, val risks: List<String>, val planner: String?)
+data class Attempts(val total: Int, val max: Int, val next: String?)
+data class ActItem(val kind: String, val tool: String, val path: String?, val cmd: String?)
+data class Activity(val live: Boolean, val agent: String?, val at: Long?, val items: List<ActItem>)
+data class TaskDetail(
+    val taskId: String, val projectId: String, val title: String, val status: String, val step: String?,
+    val first: String?, val second: String?, val request: String, val plan: Plan?,
+    val planState: String, val planPending: Boolean, val planRevising: Boolean, val revisionsLeft: Int,
+    val planFailReason: String?, val branchUrl: String?, val issueUrl: String?, val attempts: Attempts?,
+    val activity: Activity?, val summary: String?, val costUsd: Double?, val checksPassed: Boolean?,
+) {
+    val waitingPlan get() = planPending || planState == "running"
+    val planReady get() = planState == "ready" && !waitingPlan
+    val canRevise get() = planReady && revisionsLeft > 0
+    val canSwap get() = planState != "running" && !planRevising && !second.isNullOrBlank()
+    val canRetry get() = (status == "failed" || status == "cancelled") && attempts != null && attempts.next == null && attempts.total < attempts.max
+}
+
+private fun JSONArray?.strings(): List<String> = if (this == null) emptyList() else (0 until length()).mapNotNull { optString(it).takeIf { s -> s.isNotBlank() } }
+
+fun Models.task(o: JSONObject): TaskDetail {
+    val p = o.optJSONObject("plan")
+    val a = o.optJSONObject("attempts")
+    val act = o.optJSONObject("activity")
+    return TaskDetail(
+        taskId = o.optString("taskId"), projectId = o.optString("projectId"), title = o.optString("title"),
+        status = o.optString("status"), step = o.str("step"), first = o.str("first"), second = o.str("second"),
+        request = o.optString("request"),
+        plan = p?.let { Plan(it.optString("summary"), it.optJSONArray("steps").strings(), it.optJSONArray("files").strings(), it.optJSONArray("risks").strings(), it.str("planner")) },
+        planState = o.optString("planState"), planPending = o.optBoolean("planPending"), planRevising = o.optBoolean("planRevising"),
+        revisionsLeft = o.optInt("revisionsLeft"), planFailReason = o.str("planFailReason") ?: o.str("failReason"),
+        branchUrl = o.str("branchUrl"), issueUrl = o.str("issueUrl"),
+        attempts = a?.let { Attempts(it.optInt("total"), it.optInt("max"), it.str("next")) },
+        activity = act?.let { Activity(it.optBoolean("live"), it.str("agent"), it.num("at")?.toLong(), it.optJSONArray("items").items { x -> ActItem(x.optString("kind"), x.optString("tool"), x.str("path"), x.str("cmd")) }) },
+        summary = o.str("summary"), costUsd = o.num("costUsd"), checksPassed = if (o.has("checksPassed") && !o.isNull("checksPassed")) o.optBoolean("checksPassed") else null,
+    )
+}
+
+fun Models.taskList(o: JSONObject): List<TaskCard> = o.optJSONArray("tasks").items {
+    TaskCard(it.optString("taskId"), it.optString("projectId"), it.optString("title"), it.optString("status"), it.optString("step"))
+}
