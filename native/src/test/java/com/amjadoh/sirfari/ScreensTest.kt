@@ -116,7 +116,7 @@ class ScreensTest {
         rule.onNodeWithText("وافق بالبصمة").assertIsDisplayed()
     }
 
-    @Test @Config(qualifiers = "w840dp-h900dp-xhdpi-night")
+    @Test @Config(qualifiers = "w840dp-h900dp-night-xhdpi")
     fun shellOpenedDark() {
         // هيكل التطبيق كامل (بدون سيرفر: يطلع «ما وصلت»)، والتحديث الدوري ما نخليه يدور في الاختبار
         rule.mainClock.autoAdvance = false
