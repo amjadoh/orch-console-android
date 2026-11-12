@@ -27,7 +27,7 @@ private val Dark = darkColorScheme(
     surfaceVariant = Color(0xFF2A2A27), onSurfaceVariant = Color(0xFFB4B2A9),
     error = Color(0xFFF09595), errorContainer = Color(0xFF501313),
 )
-val Ok = Color(0xFF2F9B6A)
+
 
 @Composable
 fun SirfariTheme(content: @Composable () -> Unit) {

@@ -6,22 +6,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricPrompt
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,12 +19,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.launch
@@ -61,7 +48,8 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         device = DeviceKey(this)
         appOrigin = WebAuthnShape.originFor(signingCert())
-        setContent { SirfariTheme { Phase0Screen() } }
+        val repo = Repo(this, api)
+        setContent { SirfariTheme { SirfariApp(repo) { FingerprintScreen() } } }
     }
 
     private fun signingCert(): ByteArray {
@@ -154,7 +142,7 @@ class MainActivity : FragmentActivity() {
     }
 
     @Composable
-    private fun Phase0Screen() {
+    private fun FingerprintScreen() {
         val scope = rememberCoroutineScope()
         var conn by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
         var enrollMsg by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
@@ -173,52 +161,39 @@ class MainActivity : FragmentActivity() {
             }
         }
 
-        Scaffold { pad ->
-            Column(
-                Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Column(Modifier.widthIn(max = 560.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("سيرفري", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text("نسخة تجريبية أصلية: تجربة الاتصال والبصمة بس. تطبيقك الحالي ما يتأثر.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("البصمة في النسخة الأصلية: مفتاح داخل جوالك ما يطلع منه، والسيرفر يتحقق من كل توقيع. تطبيقك الحالي ما يتأثر.", color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-                    Section("١. الاتصال بالسيرفر", conn) {
-                        Button(onClick = { run({ conn = it }) { checkConnection() } }, enabled = !busy) { Text("افحص الاتصال") }
-                    }
+        Section("١. الاتصال بالسيرفر", conn) {
+            Button(onClick = { run({ conn = it }) { checkConnection() } }, enabled = !busy) { Text("افحص الاتصال") }
+        }
 
-                    Section("٢. تسجيل الجوال", enrollMsg ?: if (enrolled) true to "الجوال مسجّل ✓" else null) {
-                        if (!enrolled) {
-                            Text("يحتاج رمز تسجيل لمرة وحدة من root (نفس تسجيل أي جهاز).", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                            OutlinedTextField(
-                                value = code, onValueChange = { code = it.uppercase().take(11) }, singleLine = true,
-                                label = { Text("رمز التسجيل") }, modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
-                            )
-                            Button(onClick = { run({ enrollMsg = it }) { enroll(code.trim()) } }, enabled = !busy && code.trim().length >= 11) { Text("سجّل هالجوال") }
-                        } else {
-                            OutlinedButton(onClick = { device.forget(); enrolled = false; enrollMsg = null; testMsg = null }, enabled = !busy) { Text("انسَ المفتاح من الجوال") }
-                        }
-                    }
-
-                    Section("٣. جرّب البصمة", testMsg) {
-                        Text("تطلب بصمتك وترسل التوقيع للسيرفر يتحقق منه. ما توافق على شي ولا تغيّر شي.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                        Button(onClick = { run({ testMsg = it }) { testFingerprint() } }, enabled = !busy && enrolled) { Text("جرّب البصمة") }
-                    }
-
-                    Text(appOrigin, style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+        Section("٢. تسجيل الجوال", enrollMsg ?: if (enrolled) true to "الجوال مسجّل ✓" else null) {
+            if (!enrolled) {
+                Text("يحتاج رمز تسجيل لمرة وحدة من root (نفس تسجيل أي جهاز).", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(
+                    value = code, onValueChange = { code = it.uppercase().take(11) }, singleLine = true,
+                    label = { Text("رمز التسجيل") }, modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                )
+                Button(onClick = { run({ enrollMsg = it }) { enroll(code.trim()) } }, enabled = !busy && code.trim().length >= 11) { Text("سجّل هالجوال") }
+            } else {
+                OutlinedButton(onClick = { device.forget(); enrolled = false; enrollMsg = null; testMsg = null }, enabled = !busy) { Text("انسَ المفتاح من الجوال") }
             }
         }
+
+        Section("٣. جرّب البصمة", testMsg) {
+            Text("تطلب بصمتك وترسل التوقيع للسيرفر يتحقق منه. ما توافق على شي ولا تغيّر شي.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            Button(onClick = { run({ testMsg = it }) { testFingerprint() } }, enabled = !busy && enrolled) { Text("جرّب البصمة") }
+        }
+
+        Text(appOrigin, style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 
     @Composable
     private fun Section(title: String, result: Pair<Boolean, String>?, content: @Composable () -> Unit) {
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                content()
-                result?.let { (ok, msg) -> Text(msg, color = if (ok) Ok else MaterialTheme.colorScheme.error) }
-            }
+        Panel(title) {
+            content()
+            result?.let { (ok, msg) -> Text(msg, color = if (ok) Tone.ok else MaterialTheme.colorScheme.error) }
         }
     }
 }
