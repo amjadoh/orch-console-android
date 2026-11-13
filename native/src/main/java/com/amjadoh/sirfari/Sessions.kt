@@ -142,7 +142,7 @@ fun DeviceSection(d: DeviceInfo) {
                             Text(if (codex) "X" else "C", style = MaterialTheme.typography.labelLarge, color = c)
                         }
                         Text(s.project ?: if (codex) "Codex" else "Claude", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        StateChipOf(s.state, s.stateSec)
+                        if (codex) Chip("آخر رد ${dur(s.stateSec)}", Tone.idle) else StateChipOf(s.state, s.stateSec)
                     }
                 }
             }

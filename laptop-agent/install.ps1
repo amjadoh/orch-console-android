@@ -35,7 +35,8 @@ if (-not ($settings.PSObject.Properties.Name -contains 'hooks') -or $null -eq $s
   $settings | Add-Member -NotePropertyName hooks -NotePropertyValue ([pscustomobject]@{}) -Force
 }
 $added = 0
-foreach ($ev in 'SessionStart', 'UserPromptSubmit', 'PostToolUse', 'PermissionRequest', 'Notification', 'Stop', 'SessionEnd') {
+# No PostToolUse on Windows: starting PowerShell after every tool call would slow Claude down.
+foreach ($ev in 'SessionStart', 'UserPromptSubmit', 'PermissionRequest', 'Notification', 'Stop', 'SessionEnd') {
   $list = @()
   if ($settings.hooks.PSObject.Properties.Name -contains $ev) { $list = @($settings.hooks.$ev) }
   $exists = $false
@@ -61,7 +62,9 @@ if ($cfgText -match '(?m)^\s*notify\s*=') {
 } else {
   if (Test-Path $codexCfg) { Copy-Item -LiteralPath $codexCfg -Destination "$codexCfg.bak-sirfari-$(Get-Date -Format yyyyMMddHHmmss)" -Force }
   $notifyPath = (Join-Path $base 'codex-notify.ps1')
-  $line = "notify = [`"powershell.exe`", `"-NoProfile`", `"-ExecutionPolicy`", `"Bypass`", `"-File`", '$notifyPath']"
+  # TOML basic string: escape backslashes and double quotes (a path may contain ' or ")
+  $tomlPath = '"' + ($notifyPath -replace '\\', '\\' -replace '"', '\"') + '"'
+  $line = "notify = [`"powershell.exe`", `"-NoProfile`", `"-ExecutionPolicy`", `"Bypass`", `"-File`", $tomlPath]"
   [IO.File]::WriteAllText($codexCfg, "$line`r`n$cfgText", $utf8)
   Write-Host 'Codex: notify added.'
 }

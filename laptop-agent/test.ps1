@@ -3,7 +3,7 @@
 $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $root = Join-Path ([IO.Path]::GetTempPath()) ("sirfari-test-" + [guid]::NewGuid().ToString('N'))
-$env:SIRFARI_HOME = Join-Path $root 'Sirfari'
+$env:SIRFARI_HOME = Join-Path $root "Sir'fari" # مسار فيه ' (مثل اسم مستخدم O'Brien)
 $env:USERPROFILE = Join-Path $root 'user'
 New-Item -ItemType Directory -Force -Path $env:SIRFARI_HOME, $env:USERPROFILE | Out-Null
 $shell = (Get-Process -Id $PID).Path
@@ -53,11 +53,14 @@ $env:SIRFARI_NO_START = '1'
 $s = [IO.File]::ReadAllText((Join-Path $claudeDir 'settings.json')) | ConvertFrom-Json
 Check ($s.theme -eq 'dark' -and $s.env.X -eq '1') 'الإعدادات الموجودة باقية'
 Check (@($s.hooks.Stop).Count -eq 2) 'Stop: hook أمجد باقي + hook سيرفري مرة وحدة'
-foreach ($ev in 'SessionStart', 'UserPromptSubmit', 'PostToolUse', 'PermissionRequest', 'Notification', 'SessionEnd') { Check (@($s.hooks.$ev).Count -eq 1) "hook $ev مرة وحدة" }
-Check (@($s.hooks.PostToolUse)[0].matcher -eq '*') 'PostToolUse matcher'
+foreach ($ev in 'SessionStart', 'UserPromptSubmit', 'PermissionRequest', 'Notification', 'SessionEnd') { Check (@($s.hooks.$ev).Count -eq 1) "hook $ev مرة وحدة" }
+Check ($null -eq $s.hooks.PostToolUse) 'ما فيه PostToolUse على ويندوز (عشان ما يبطّئ)'
+Check (@($s.hooks.PermissionRequest)[0].matcher -eq '*') 'PermissionRequest matcher'
 Check ([string]@(@($s.hooks.Stop)[1].hooks)[0].command -like '*Sirfari*hook.ps1*') 'أمر الـ hook'
 $toml = [IO.File]::ReadAllText((Join-Path $codexDir 'config.toml'))
 Check ($toml -match '^notify = \[' -and ([regex]::Matches($toml, 'notify =')).Count -eq 1) 'Codex notify في أول الملف ومرة وحدة'
+$expected = '"' + ((Join-Path $env:SIRFARI_HOME 'codex-notify.ps1') -replace '\\', '\\') + '"'
+Check ($toml.Contains($expected)) 'المسار في TOML مهرّب صح (حتى مع علامة '')'
 Check ($toml -match '\[projects\.x\]') 'إعداد Codex الموجود باقي'
 Check (@(Get-ChildItem $claudeDir -Filter 'settings.json.bak-sirfari-*').Count -ge 1) 'نسخة احتياطية'
 

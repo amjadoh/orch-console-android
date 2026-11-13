@@ -19,7 +19,9 @@ function Get-Report {
     try {
       $e = [IO.File]::ReadAllText($f.FullName) | ConvertFrom-Json
       # untouched for two days = probably closed without SessionEnd: drop it
-      if ($now - [int64]$e.at -gt 172800000) { Remove-Item -LiteralPath $f.FullName -Force; continue }
+      # Codex only reports finished turns, so its entries expire sooner (6h); Claude after two days
+      $maxAge = if ([string]$e.tool -eq 'codex') { 21600000 } else { 172800000 }
+      if ($now - [int64]$e.at -gt $maxAge) { Remove-Item -LiteralPath $f.FullName -Force; continue }
       $sessions += [ordered]@{ sessionId = [string]$e.sessionId; tool = [string]$e.tool; project = $e.project; state = [string]$e.state; at = [int64]$e.at }
     } catch {}
   }
