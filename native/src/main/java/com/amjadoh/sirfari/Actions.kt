@@ -7,7 +7,7 @@ import org.json.JSONObject
  * القرارات بالبصمة (نفس اللي يسويه الويب): خيارات ← بصمة ← إرسال ← متابعة الطلب.
  * لو انقطع الاتصال بعد الإرسال ما نرسل مرة ثانية أبداً: نقول لك تشيّك الحالة، والسيرفر بعد يرفض التحدي المستخدم.
  */
-class Actions(private val api: Api, private val signer: Signer, private val device: DeviceKey) {
+class Actions(val api: Api, private val signer: Signer, private val device: DeviceKey) {
 
     suspend fun decide(taskId: String, purpose: String, note: String? = null, onStep: (Int) -> Unit = {}): String {
         val body = JSONObject().put("taskId", taskId).put("purpose", purpose)

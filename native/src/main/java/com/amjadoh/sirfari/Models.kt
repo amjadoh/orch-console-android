@@ -7,7 +7,13 @@ import org.json.JSONObject
 // لو السيرفر أقدم أو أحدث، نعرض اللي نعرفه وما نطيح.
 
 data class Problem(val key: String, val title: String, val level: String, val line: String)
-data class TaskCard(val taskId: String, val projectId: String, val title: String, val status: String, val step: String)
+data class TaskCard(
+    val taskId: String, val projectId: String, val title: String, val status: String, val step: String,
+    val first: String? = null, val second: String? = null, val since: Long? = null, val planPending: Boolean = false,
+) {
+    /** مرحلة الشغل الحقيقية (من phase في المنظّم): خطة ← ينفذ ← يراجع ← يفحص */
+    val stage get() = when (step) { "approval" -> 0; "first" -> 1; "second" -> 2; "checks" -> 3; "done" -> 4; else -> if (status == "running") 1 else 0 }
+}
 data class Overview(
     val awaiting: Int, val running: Int, val doneToday: Int, val failed: Int,
     val healthLevel: String, val problems: List<Problem>, val tasks: List<TaskCard>,
@@ -37,6 +43,11 @@ private fun JSONObject.num(k: String) = if (has(k) && !isNull(k)) optDouble(k).t
 private inline fun <T> JSONArray?.items(f: (JSONObject) -> T?): List<T> =
     if (this == null) emptyList() else (0 until length()).mapNotNull { optJSONObject(it)?.let(f) }
 
+private fun card(it: JSONObject) = TaskCard(
+    it.optString("taskId"), it.optString("projectId"), it.optString("title"), it.optString("status"), it.optString("step"),
+    it.str("first"), it.str("second"), it.num("phaseSince")?.toLong(), it.optBoolean("planPending"),
+)
+
 object Models {
     fun overview(o: JSONObject): Overview {
         val c = o.optJSONObject("counts") ?: JSONObject()
@@ -46,7 +57,7 @@ object Models {
             awaiting = c.optInt("awaiting"), running = c.optInt("running"), doneToday = c.optInt("doneToday"), failed = c.optInt("failed"),
             healthLevel = h.str("level") ?: "unknown",
             problems = h.optJSONArray("problems").items { Problem(it.optString("key"), it.optString("title"), it.optString("level"), it.optString("line")) },
-            tasks = o.optJSONArray("tasks").items { TaskCard(it.optString("taskId"), it.optString("projectId"), it.optString("title"), it.optString("status"), it.optString("step")) },
+            tasks = o.optJSONArray("tasks").items { card(it) },
             adminPending = o.optInt("adminPending"), serverBad = s.optInt("bad"), serverWarn = s.optInt("warn"),
             maintenanceUntil = h.num("maintenanceUntil")?.toLong(),
         )
@@ -115,5 +126,5 @@ fun Models.task(o: JSONObject): TaskDetail {
 }
 
 fun Models.taskList(o: JSONObject): List<TaskCard> = o.optJSONArray("tasks").items {
-    TaskCard(it.optString("taskId"), it.optString("projectId"), it.optString("title"), it.optString("status"), it.optString("step"))
+    card(it)
 }

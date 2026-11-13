@@ -69,11 +69,12 @@ class ScreensTest {
          "issueUrl":"https://github.com/amjadoh/orch-inbox/issues/12"}
     """))
 
-    private fun screen(name: String, content: @Composable () -> Unit) {
+    private fun screen(name: String, scroll: Boolean = true, dark: Boolean? = null, content: @Composable () -> Unit) {
         rule.setContent {
-            SirfariTheme {
+            SirfariTheme(dark) {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
+                    if (scroll) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) { content() }
+                    else Column(Modifier.fillMaxSize()) { content() }
                 }
             }
         }
@@ -85,6 +86,20 @@ class ScreensTest {
         FileOutputStream(File(dir, "$name.png")).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
+    private val admin = JSONObject("""{"requests":[{"id":"adm-1111111111111111","action":"install","state":"pending","summary":"تحديث سيرفري"}]}""")
+
+    @Test @Config(qualifiers = "w411dp-h891dp-xxhdpi")
+    fun homeLight() {
+        screen("home-light-411", dark = false) { HomeScreen(Repo.Result(overview, now, false, null), Repo.Result(server, now, false, null), admin, now, null, {}, {}) }
+        rule.onNodeWithText("شغّال الحين").assertIsDisplayed()
+    }
+
+    @Test @Config(qualifiers = "w840dp-h900dp-xhdpi")
+    fun homeOpened() {
+        screen("home-840", dark = true) { HomeScreen(Repo.Result(overview, now, false, null), Repo.Result(server, now, false, null), admin, now, null, {}, {}) }
+        rule.onNodeWithText("يحتاج قرارك").assertIsDisplayed()
+    }
+
     private fun actions(): Actions {
         val act = Robolectric.buildActivity(FragmentActivity::class.java).setup().get()
         val device = DeviceKey(act)
@@ -93,27 +108,29 @@ class ScreensTest {
 
     @Test @Config(qualifiers = "w411dp-h891dp-xxhdpi")
     fun homeFolded() {
-        screen("home-411") { HomeScreen(Repo.Result(overview, now, false, null), now, {}, {}) }
-        rule.onNodeWithText("فيه شي تتابعه").assertIsDisplayed()
+        screen("home-411", dark = true) { HomeScreen(Repo.Result(overview, now, false, null), Repo.Result(server, now, false, null), admin, now, null, {}, {}) }
+        rule.onNodeWithText("ينتظرون قرارك").assertIsDisplayed()
+        rule.onNodeWithText("وافق بالبصمة", substring = true).assertIsDisplayed()
     }
 
     @Test @Config(qualifiers = "w411dp-h891dp-xxhdpi")
     fun serverFolded() {
-        screen("server-411") { ServerScreen(Repo.Result(server, now, false, null), now) }
+        screen("server-411", dark = true) { ServerScreen(Repo.Result(server, now, false, null), now) }
         rule.onNodeWithText("الذاكرة").assertIsDisplayed()
     }
 
     @Test @Config(qualifiers = "w411dp-h891dp-xxhdpi")
     fun offlineShowsLastSnapshot() {
-        screen("home-offline-411") { HomeScreen(Repo.Result(overview, now - 300_000, true, "ما وصلت للسيرفر. تأكد إن Tailscale شغّال"), now, {}, {}) }
+        screen("home-offline-411") { HomeScreen(Repo.Result(overview, now - 300_000, true, "ما وصلت للسيرفر. تأكد إن Tailscale شغّال"), null, null, now, null, {}, {}) }
         rule.onNodeWithText("بدون اتصال", substring = true).assertIsDisplayed()
     }
 
     @Test @Config(qualifiers = "w411dp-h891dp-xxhdpi")
     fun taskDecisionsFolded() {
         val a = actions()
-        screen("task-411") { TaskDetailBody(task, a, {}, {}, {}) }
+        screen("task-411", scroll = false, dark = true) { TaskPage(task, a, {}, {}, {}, showBack = true) }
         rule.onNodeWithText("وافق بالبصمة").assertIsDisplayed()
+        rule.onNodeWithText("آخر حركات Claude وهو يخطط").assertExists()
     }
 
     @Test @Config(qualifiers = "w840dp-h900dp-night-xhdpi")
@@ -145,7 +162,7 @@ class ScreensTest {
     fun tasksOpened() {
         val a = actions()
         val admin = JSONObject("""{"requests":[{"id":"adm-1111111111111111","action":"install","state":"pending","summary":"تحديث سيرفري"}]}""")
-        screen("tasks-840") { TaskList(Repo.Result(overview, now, false, null), admin, now, null, {}, a, {}, {}) }
-        rule.onNodeWithText("طلبات إدارية (root)").assertIsDisplayed()
+        screen("tasks-840") { TaskList(Repo.Result(overview, now, false, null), admin, now, null, {}, a, {}) }
+        rule.onNodeWithText("طلبات root").assertIsDisplayed()
     }
 }

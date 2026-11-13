@@ -34,7 +34,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private fun icon(type: String) = when (type) { "video" -> "🎬"; "image" -> "🖼️"; "pdf" -> "📄"; "apk" -> "📦"; else -> "📎" }
+private fun icon(type: String) = when (type) { "video" -> "فيديو"; "image" -> "صورة"; "pdf" -> "PDF"; "apk" -> "APK"; else -> "ملف" }
 private val dateFmt = SimpleDateFormat("d MMM yyyy", Locale("ar"))
 
 /**
@@ -48,7 +48,8 @@ fun FilesScreen(api: Api) {
     var rootLabel by rememberSaveable { mutableStateOf("") }
     var roots by remember { mutableStateOf<List<JSONObject>?>(null) }
     var err by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) {
+    val tick = LocalRefresh.current
+    LaunchedEffect(tick) {
         runCatching { api.get("/files/api/roots").optJSONArray("roots") }.fold(
             { a -> roots = (0 until (a?.length() ?: 0)).mapNotNull { a!!.optJSONObject(it) }; err = null }, { err = it.message })
     }
@@ -89,8 +90,12 @@ private fun LatestRelease(api: Api, r: JSONObject) {
     val hasApk = (r.optJSONObject("types")?.optInt("apk") ?: 0) > 0
     var f by remember(id) { mutableStateOf<JSONObject?>(null) }
     var note by remember(id) { mutableStateOf<String?>(null) }
-    LaunchedEffect(id) {
+    var loaded by remember(id) { mutableStateOf(false) }
+    val tick = LocalRefresh.current
+    LaunchedEffect(id, tick) {
+        loaded = false
         f = runCatching { api.get("/files/api/list?root=${URLEncoder.encode(id, "UTF-8")}&limit=1" + if (hasApk) "&type=apk" else "").optJSONArray("files")?.optJSONObject(0) }.getOrNull()
+        loaded = true
     }
     val file = f
     Row(
@@ -101,14 +106,14 @@ private fun LatestRelease(api: Api, r: JSONObject) {
         }.padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text(icon(file?.optString("type") ?: r.optString("icon")))
+        Chip(icon(file?.optString("type") ?: r.optString("icon")), Tone.action)
         Column(Modifier.weight(1f)) {
             Text(r.optString("label"))
-            Text(file?.let { listOf(it.optString("name"), size(it.optDouble("size")), dateFmt.format(Date(it.optLong("mtime")))).joinToString(" · ") } ?: "…",
+            Text(file?.let { listOf(it.optString("name"), size(it.optDouble("size")), dateFmt.format(Date(it.optLong("mtime")))).joinToString(" · ") } ?: if (loaded) "ما قدرت أجيب آخر إصدار، اسحب للتحديث" else "…",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
             note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Tone.ok) }
         }
-        if (file != null) Text("⬇", color = MaterialTheme.colorScheme.primary)
+        if (file != null) androidx.compose.material3.Icon(SirfariIcons.Files, "نزّل", tint = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -121,7 +126,8 @@ private fun FileList(api: Api, root: String, label: String, onBack: () -> Unit) 
     var groups by remember(root) { mutableStateOf<List<String>>(emptyList()) }
     var note by remember { mutableStateOf<String?>(null) }
     var playing by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(root, group) {
+    val tick = LocalRefresh.current
+    LaunchedEffect(root, group, tick) {
         val q = "/files/api/list?root=${URLEncoder.encode(root, "UTF-8")}&limit=60" + (group?.let { "&group=${URLEncoder.encode(it, "UTF-8")}" } ?: "")
         data = runCatching { api.get(q) }.getOrNull()
         if (group == null) {
@@ -153,7 +159,7 @@ private fun FileList(api: Api, root: String, label: String, onBack: () -> Unit) 
                 }.padding(vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text(icon(type))
+                Chip(icon(type), Tone.action)
                 Column(Modifier.weight(1f)) {
                     Text(f.optString("name"), maxLines = 2)
                     val place = f.optString("place").takeIf { it.isNotBlank() && it != "null" }

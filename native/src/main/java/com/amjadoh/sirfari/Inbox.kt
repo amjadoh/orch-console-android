@@ -38,8 +38,9 @@ object Inbox {
             val id = t.optString("taskId")
             val title = t.optString("title").ifBlank { id }
             when (t.optString("status")) {
-                "awaiting" -> if (t.optString("planState") == "ready" && !t.optBoolean("planPending"))
-                    out += Event("await:$id:${t.optInt("revisions")}", CH_APPROVALS, "تنتظر موافقتك: $id", title, id)
+                // ملخص السيرفر (/api/overview) ما فيه planState: نعتبرها جاهزة إلا لو قال إنها لسا تنكتب
+                "awaiting" -> if (t.optString("planState", "ready").let { it == "ready" || it.isBlank() } && !t.optBoolean("planPending"))
+                    out += Event("await:$id:${t.optInt("revisions")}", CH_APPROVALS, "خطة جاهزة تنتظر موافقتك", "$title · ${t.optString("projectId").ifBlank { id }}", id)
                 "done", "failed" -> {
                     val at = if (t.isNull("finishedAt")) 0L else t.optLong("finishedAt")
                     if (now - at < 24 * 3600_000L) {
@@ -57,10 +58,14 @@ object Inbox {
         return out
     }
 
-    /** صافية: الجديد بس، والمحفوظ بعد التحديث (آخر 300 مفتاح) */
-    fun diff(current: List<Event>, seen: Set<String>, firstRun: Boolean): Pair<List<Event>, Set<String>> {
-        val fresh = if (firstRun) emptyList() else current.filter { it.key !in seen }
-        val keep = (seen + current.map { it.key }).toList().takeLast(300).toSet()
+    /**
+     * صافية: الجديد بس (أول [limit])، والمحفوظ بعد التحديث (آخر 300 مفتاح).
+     * اللي ما انعرض لأنه زاد عن الحد ما ينحفظ كـ«شفته»، فيطلع المرة الجاية بدل ما يضيع.
+     */
+    fun diff(current: List<Event>, seen: Set<String>, firstRun: Boolean, limit: Int = 5): Pair<List<Event>, Set<String>> {
+        if (firstRun) return emptyList<Event>() to (seen + current.map { it.key }).toList().takeLast(300).toSet()
+        val fresh = current.filter { it.key !in seen }.take(limit)
+        val keep = (seen + fresh.map { it.key }).toList().takeLast(300).toSet()
         return fresh to keep
     }
 
@@ -87,7 +92,8 @@ object Inbox {
         e.taskId?.let { open.putExtra(EXTRA_TASK, it) }
         val pi = PendingIntent.getActivity(ctx, e.key.hashCode(), open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val n = NotificationCompat.Builder(ctx, e.channel)
-            .setSmallIcon(android.R.drawable.stat_notify_more)
+            .setSmallIcon(R.drawable.ic_stat_sirfari)
+            .setColor(0xFF5AB0FF.toInt())
             .setContentTitle(e.title).setContentText(e.text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(e.text))
             .setContentIntent(pi).setAutoCancel(true)
@@ -98,6 +104,8 @@ object Inbox {
 
 class InboxWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
+        // الإشعارات مقفولة: ما نعلّم شي إنه «انشاف»، فيطلع أول ما تفتحها
+        if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return Result.success()
         val api = Api()
         val overview = runCatching { api.get("/api/overview") }.getOrElse { return Result.success() } // Tailscale طافي: نحاول المرة الجاية
         val admin = runCatching { api.get("/api/admin") }.getOrNull()
@@ -106,7 +114,7 @@ class InboxWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
         val (fresh, keep) = Inbox.diff(Inbox.events(overview, admin, System.currentTimeMillis()), prefs.getStringSet("seen", emptySet()) ?: emptySet(), first)
         prefs.edit().putStringSet("seen", keep).putBoolean("started", true).apply()
         Inbox.channels(applicationContext)
-        fresh.take(5).forEach { Inbox.show(applicationContext, it) }
+        fresh.forEach { Inbox.show(applicationContext, it) }
         return Result.success()
     }
 }

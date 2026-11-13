@@ -76,7 +76,8 @@ fun CommandSheet(api: Api, actions: Actions, onClose: () -> Unit, onSent: () -> 
         ) {
             Text("أمر جديد", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             OutlinedTextField(
-                value = text, onValueChange = { text = it.take(600); msg = null }, minLines = 3, modifier = Modifier.fillMaxWidth(),
+                // المعاينة القديمة تنمسح فوراً مع أي تعديل: ما ينرسل شي تحت ملخص قديم
+                value = text, onValueChange = { text = it.take(600); msg = null; preview = null }, minLines = 3, modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("مثلاً: افتح جلسة للمصروف: أضف تصدير PDF\nأو: افتح جلسة المصروف على الجوال") },
             )
             preview?.let { p ->

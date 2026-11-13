@@ -46,7 +46,8 @@ fun DiagnosisSection(api: Api, onChanged: () -> Unit) {
     var diag by remember { mutableStateOf<JSONObject?>(null) }
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     var reload by remember { mutableIntStateOf(0) }
-    LaunchedEffect(reload) { diag = runCatching { api.get("/api/diagnosis") }.getOrNull() ?: diag }
+    val tick = LocalRefresh.current
+    LaunchedEffect(reload, tick) { diag = runCatching { api.get("/api/diagnosis") }.getOrNull() ?: diag }
     val d = diag ?: return
     val cards = d.optJSONArray("cards").list()
     Panel("التشخيص") {

@@ -67,7 +67,8 @@ fun SpaceScreen(api: Api) {
 private fun <T> loadJson(key: Any, block: suspend () -> T): Pair<T?, String?> {
     var data by remember(key) { mutableStateOf<T?>(null) }
     var err by remember(key) { mutableStateOf<String?>(null) }
-    LaunchedEffect(key) { runCatching { block() }.fold({ data = it; err = null }, { err = it.message }) }
+    val tick = LocalRefresh.current
+    LaunchedEffect(key, tick) { runCatching { block() }.fold({ data = it; err = null }, { err = it.message }) }
     return data to err
 }
 
@@ -116,7 +117,7 @@ private fun SpaceSummary(api: Api, onOpen: (String) -> Unit, onCat: (String) -> 
 @Composable
 private fun ItemRow(x: JSONObject, onOpen: (String) -> Unit) {
     val locked = x.optBoolean("locked")
-    val icon = if (locked) "🔒" else if (x.optString("kind") == "dir") "📁" else "📄"
+    val icon = if (locked) "محمي ·" else ""
     Row(
         Modifier.fillMaxWidth().clickable { onOpen(x.optString("path")) }.padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),

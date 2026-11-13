@@ -25,7 +25,8 @@ import org.json.JSONObject
 fun ProjectsSection(api: Api, openTask: (String) -> Unit) {
     var data by remember { mutableStateOf<JSONObject?>(null) }
     var open by rememberSaveable { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) { data = runCatching { api.get("/api/projects") }.getOrNull() }
+    val tick = LocalRefresh.current
+    LaunchedEffect(tick) { data = runCatching { api.get("/api/projects") }.getOrNull() }
     val list = data?.optJSONArray("projects") ?: return
     if (list.length() == 0) return
     val uri = LocalUriHandler.current
