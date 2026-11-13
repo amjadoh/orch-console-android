@@ -40,14 +40,19 @@ import org.json.JSONObject
 
 // كل جلسات Claude وCodex اللي تاخذ من رام السيرفر، من أي مكان انفتحت. الحالة من hooks حق Claude Code (صادقة):
 // تشتغل / تحتاجك / جاهزة / غير معروف. القفل بالبصمة لجلسة Claude بعينها، بس لو جاهزة من 10 دقايق
-// (أو غير معروفة مع تأكيدك). Codex يظهر برامه بس (ما فيه طريقة رسمية تقفله من برّا).
+// (أو غير معروفة مع تأكيدك). Codex: كل محادثة لحالها (الحالة من خدمة Codex نفسها)، وتنقفل بالبصمة بنفس القاعدة
+// (القفل = أرشفة: تبقى في «المؤرشفة» في تطبيق Codex). خدمة Codex نفسها تطلع برامها بس.
 
-data class SessionInfo(val id: String, val pid: Int, val start: Long, val kind: String, val label: String, val project: String?, val ageSec: Long?, val rssMb: Long?, val state: String, val stateSec: Long?) {
+data class SessionInfo(val id: String, val pid: Int, val start: Long, val kind: String, val label: String, val project: String?, val ageSec: Long?, val rssMb: Long?, val state: String, val stateSec: Long?, val subagents: Int = 0) {
     val isCodex get() = kind.startsWith("codex")
+    /** محادثة Codex بعينها (id = رقم المحادثة) */
+    val isCodexThread get() = kind == "codex-thread"
     val unknown get() = state == "unknown"
     /** ينفع يتقفل؟ null = إيه، وإلا السبب */
     val blockReason: String? get() = when {
-        isCodex -> "Codex يتقفل من تطبيق Codex"
+        kind == "codex-app" -> "هذي خدمة Codex نفسها وفيها كل المحادثات. اقفل المحادثات وحدة وحدة"
+        kind == "codex-cli" -> "Codex في الطرفية يتقفل من الطرفية نفسها"
+        isCodexThread && unknown -> "حالتها غير معروفة، اقفلها من تطبيق Codex"
         state == "working" -> "تشتغل الحين"
         state == "needs" -> "تنتظر موافقتك على شي"
         state == "ready" && (stateSec ?: 0) < 600 -> "خلصت ردها قبل شوي، يمكن ترجع لها"
@@ -56,7 +61,7 @@ data class SessionInfo(val id: String, val pid: Int, val start: Long, val kind: 
 }
 data class DeviceSession(val sessionId: String, val tool: String, val project: String?, val state: String, val stateSec: Long?)
 data class DeviceInfo(val id: String, val name: String, val stale: Boolean, val sessions: List<DeviceSession>, val ramMb: Long)
-data class SessionsView(val all: List<SessionInfo>, val stale: Boolean, val openable: List<String>, val installed: Boolean, val devices: List<DeviceInfo> = emptyList(), val openNow: List<String> = emptyList()) {
+data class SessionsView(val all: List<SessionInfo>, val stale: Boolean, val openable: List<String>, val installed: Boolean, val devices: List<DeviceInfo> = emptyList(), val openNow: List<String> = emptyList(), val codexDown: Boolean = false, val codexPartial: Boolean = false) {
     /** كل المشاريع (Codex يقدر يفتح حتى اللي فيه جلسة Claude مفتوحة) */
     val allProjects get() = (openable + openNow).distinct().sorted()
 }
@@ -100,7 +105,16 @@ object SessionsModel {
                 (0 until (ps?.length() ?: 0)).sumOf { ps!!.optJSONObject(it)?.optLong("rssMb") ?: 0L },
             )
         }
-        return SessionsView(all, a?.optBoolean("stale") ?: true, openable, o.optBoolean("installed"), devices, openNow)
+        // محادثات Codex (من خدمة Codex عن طريق orch-sessions)
+        val cx = o.optJSONObject("codex")
+        val ct = cx?.optJSONArray("threads")
+        val threads = (0 until (ct?.length() ?: 0)).mapNotNull { ct!!.optJSONObject(it) }.map {
+            val name = it.optString("name").takeIf { n -> n.isNotBlank() && n != "null" }
+            SessionInfo(it.optString("id"), 0, 0, "codex-thread", "محادثة Codex",
+                name ?: it.optString("project").takeIf { p -> p.isNotBlank() && p != "null" }, null, null,
+                it.optString("state", "unknown"), if (it.isNull("stateSec")) null else it.optLong("stateSec"), it.optInt("subagents"))
+        }
+        return SessionsView(threads + all, a?.optBoolean("stale") ?: true, openable, o.optBoolean("installed"), devices, openNow, codexDown = cx != null && !cx.optBoolean("ok", true), codexPartial = cx != null && !cx.optBoolean("complete", true))
     }
 }
 
@@ -131,7 +145,11 @@ fun SessionsSection(v: SessionsView?, actions: Actions, onChanged: () -> Unit) {
                         }
                         Column(Modifier.weight(1f)) {
                             Text(s.project ?: s.label, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${s.label} · صار لها ${dur(s.ageSec)} · ${s.rssMb ?: "—"} ميجا", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                            Text(
+                                if (s.isCodexThread) "${s.label}${if (s.subagents > 0) " · معها ${s.subagents} وكلاء" else ""}"
+                                else "${s.label} · صار لها ${dur(s.ageSec)} · ${s.rssMb ?: "—"} ميجا",
+                                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                            )
                         }
                         StateChip(s)
                     }
@@ -139,6 +157,8 @@ fun SessionsSection(v: SessionsView?, actions: Actions, onChanged: () -> Unit) {
             }
         }
         if (v.all.isNotEmpty()) Text("المجموع ${total} ميجا من رام السيرفر${if (v.stale) " · القائمة قديمة شوي" else ""}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (v.codexDown) Text("خدمة Codex ما ردت، فمحادثات Codex ما تطلع الحين", style = MaterialTheme.typography.labelSmall, color = Tone.warn)
+        else if (v.codexPartial) Text("محادثات Codex كثيرة، وظاهر منها جزء بس", style = MaterialTheme.typography.labelSmall, color = Tone.warn)
     }
     v.devices.forEach { d -> DeviceSection(d) }
     stop?.let { s -> StopSheet(s, actions, onClose = { stop = null }, onDone = onChanged) }
@@ -198,11 +218,13 @@ private fun StopSheet(s: SessionInfo, actions: Actions, onClose: () -> Unit, onD
             Panel(padding = 16) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     StateChip(s)
-                    Text("صار لها ${dur(s.ageSec)} · تاخذ ${s.rssMb ?: "—"} ميجا", style = MaterialTheme.typography.bodyMedium)
+                    Text(if (s.isCodexThread) "آخر نشاط قبل ${dur(s.stateSec)}${if (s.subagents > 0) " · معها ${s.subagents} وكلاء" else ""}" else "صار لها ${dur(s.ageSec)} · تاخذ ${s.rssMb ?: "—"} ميجا", style = MaterialTheme.typography.bodyMedium)
                 }
                 Text(
                     when {
-                        s.isCodex -> "Codex ما فيه طريقة رسمية تقفله من برّا. اقفل المحادثة من تطبيق Codex."
+                        s.isCodexThread -> "تنشال من خدمة Codex (مع وكلائها)، والمحادثة تبقى في «المؤرشفة» في تطبيق Codex وتقدر ترجعها. وقت القفل يتأكد من جديد إنها ما تشتغل."
+                        s.kind == "codex-app" -> "خدمة Codex على السيرفر: فيها كل محادثات Codex، وتطلع في تطبيق ChatGPT. ما تنقفل من هنا، اقفل المحادثات وحدة وحدة."
+                        s.isCodex -> "Codex في الطرفية: يتقفل من الطرفية نفسها."
                         s.kind == "claude-rc" -> "جلسة فتحتها من سيرفري: تنقفل نهائياً (ما ترجع تنفتح لحالها)، وتقدر تفتحها مرة ثانية من «افتح جلسة»."
                         else -> "تنقفل بهدوء، والمحادثة محفوظة وتقدر تكمّلها من تطبيق Claude. وقت القفل يتأكد من جديد إنها ما تشتغل."
                     },
@@ -220,7 +242,7 @@ private fun StopSheet(s: SessionInfo, actions: Actions, onClose: () -> Unit, onD
             val reason = s.blockReason
             if (reason == null) FingerprintButton(
                 "اقفلها بالبصمة", "انقفلت", listOf("بصمتك", "يتأكد من حالتها", "يقفلها"), enabled = !s.unknown || sure,
-                action = { onStep -> onStep(0); actions.stopSession(s, force = s.unknown && sure) { onStep(1) } },
+                action = { onStep -> onStep(0); if (s.isCodexThread) actions.stopCodex(s) { onStep(1) } else actions.stopSession(s, force = s.unknown && sure) { onStep(1) } },
                 onResult = { ok, m -> msg = ok to m },
             ) else Text("ما تنقفل الحين: $reason", color = Tone.warn, style = MaterialTheme.typography.bodyMedium)
             msg?.let { (ok, m) -> Text(m, color = if (ok) Tone.ok else MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
