@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -55,7 +56,22 @@ data class SessionInfo(val id: String, val pid: Int, val start: Long, val kind: 
 }
 data class DeviceSession(val sessionId: String, val tool: String, val project: String?, val state: String, val stateSec: Long?)
 data class DeviceInfo(val id: String, val name: String, val stale: Boolean, val sessions: List<DeviceSession>, val ramMb: Long)
-data class SessionsView(val all: List<SessionInfo>, val stale: Boolean, val openable: List<String>, val installed: Boolean, val devices: List<DeviceInfo> = emptyList())
+data class SessionsView(val all: List<SessionInfo>, val stale: Boolean, val openable: List<String>, val installed: Boolean, val devices: List<DeviceInfo> = emptyList(), val openNow: List<String> = emptyList()) {
+    /** كل المشاريع (Codex يقدر يفتح حتى اللي فيه جلسة Claude مفتوحة) */
+    val allProjects get() = (openable + openNow).distinct().sorted()
+}
+
+/** اسم مشروع جديد: نفس شروط السيرفر (حروف وأرقام ومسافة و- و_ و.، 40 حرف) */
+fun validNewProject(name: String, existing: List<String>): String? {
+    val n = name.trim()
+    return when {
+        n.isEmpty() -> "اكتب اسم المشروع"
+        n.length > 40 -> "الاسم طويل (40 حرف بالكثير)"
+        !Regex("^[\\p{L}\\p{N}][\\p{L}\\p{N} _.-]*$").matches(n) || n.contains("..") || n.contains(".bak", ignoreCase = true) || Regex("-[0-9a-f]{7}$").containsMatchIn(n) -> "حروف وأرقام ومسافة و- و_ بس"
+        existing.any { it.equals(n, ignoreCase = true) } -> "فيه مشروع بهالاسم، اختره من القائمة"
+        else -> null
+    }
+}
 
 object SessionsModel {
     fun parse(o: JSONObject): SessionsView {
@@ -70,6 +86,8 @@ object SessionsModel {
         // «📂 تقدر تفتح: a، b، c» من قائمة rc-ctl
         val line = o.optString("list").lines().firstOrNull { it.contains("تقدر تفتح") }
         val openable = line?.substringAfter(":", "")?.split("،")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+        // «• المشروع — آخر استخدام…» تحت «المفتوح»
+        val openNow = o.optString("list").lines().filter { it.startsWith("• ") }.map { it.removePrefix("• ").substringBefore(" — ").trim() }.filter { it.isNotBlank() }
         val devs = o.optJSONArray("devices")
         val devices = (0 until (devs?.length() ?: 0)).mapNotNull { devs!!.optJSONObject(it) }.map { d ->
             val ss = d.optJSONArray("sessions")
@@ -82,7 +100,7 @@ object SessionsModel {
                 (0 until (ps?.length() ?: 0)).sumOf { ps!!.optJSONObject(it)?.optLong("rssMb") ?: 0L },
             )
         }
-        return SessionsView(all, a?.optBoolean("stale") ?: true, openable, o.optBoolean("installed"), devices)
+        return SessionsView(all, a?.optBoolean("stale") ?: true, openable, o.optBoolean("installed"), devices, openNow)
     }
 }
 
@@ -124,7 +142,7 @@ fun SessionsSection(v: SessionsView?, actions: Actions, onChanged: () -> Unit) {
     }
     v.devices.forEach { d -> DeviceSection(d) }
     stop?.let { s -> StopSheet(s, actions, onClose = { stop = null }, onDone = onChanged) }
-    if (open) OpenSheet(v.openable, actions, onClose = { open = false }, onDone = onChanged)
+    if (open) OpenSheet(v.openable, v.allProjects, actions, onClose = { open = false }, onDone = onChanged)
 }
 
 /** جلسات اللابتوب (من sirfari-agent): للعرض، والتحكم من اللابتوب نفسه */
@@ -212,30 +230,54 @@ private fun StopSheet(s: SessionInfo, actions: Actions, onClose: () -> Unit, onD
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun OpenSheet(projects: List<String>, actions: Actions, onClose: () -> Unit, onDone: () -> Unit) {
+private fun OpenSheet(openable: List<String>, all: List<String>, actions: Actions, onClose: () -> Unit, onDone: () -> Unit) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var codex by remember { mutableStateOf(false) }
     var pick by remember { mutableStateOf<String?>(null) }
+    var creating by remember { mutableStateOf(false) }
+    var newName by remember { mutableStateOf("") }
     var msg by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
     LaunchedEffect(msg) { if (msg?.first == true) { delay(2500); onDone(); onClose() } }
+    // Claude: المشاريع اللي ما فيها جلسة مفتوحة. Codex: كلها
+    val projects = if (codex) all else openable
+    val nameErr = if (creating) validNewProject(newName, all) else null
+    val target = if (creating) newName.trim().takeIf { nameErr == null } else pick?.takeIf { it in projects }
+    val tool = if (codex) "Codex" else "Claude"
     ModalBottomSheet(onDismissRequest = onClose, sheetState = sheet, containerColor = MaterialTheme.colorScheme.surface) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("افتح جلسة Claude", style = MaterialTheme.typography.headlineSmall)
-            Text("تطلع لك في تطبيق Claude (Code) على الجوال واللابتوب. الحد 3 جلسات، وتنقفل لحالها لو ما استخدمتها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("افتح جلسة", style = MaterialTheme.typography.headlineSmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(false to "Claude", true to "Codex").forEach { (c, label) -> Pill(label, codex == c) { codex = c; msg = null } }
+            }
+            Text(
+                if (codex) "تطلع لك في تطبيق ChatGPT (Codex) على السيرفر. تنقفل من تطبيق Codex."
+                else "تطلع لك في تطبيق Claude (Code) على الجوال واللابتوب. الحد 3 جلسات، وتنقفل لحالها لو ما استخدمتها.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             if (projects.isEmpty()) Text("القائمة ما وصلت. اسحب للتحديث وجرّب.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                projects.forEach { p ->
-                    val sel = p == pick
-                    Text(p, style = MaterialTheme.typography.labelLarge, color = if (sel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.clip(RoundedCornerShape(50)).background(if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant).clickable { pick = p }.padding(horizontal = 14.dp, vertical = 8.dp))
-                }
+                projects.forEach { p -> Pill(p, !creating && p == pick) { pick = p; creating = false; msg = null } }
+                Pill("+ مشروع جديد", creating) { creating = true; msg = null }
             }
+            if (creating) OutlinedTextField(
+                value = newName, onValueChange = { newName = it.take(40); msg = null }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                label = { Text("اسم المشروع الجديد") }, placeholder = { Text("مثلاً: متجر-العطور") },
+                isError = newName.isNotBlank() && nameErr != null,
+                supportingText = { Text(if (newName.isNotBlank() && nameErr != null) nameErr else "يتسوى مجلده في ~/work/projects وفيه git وملف تسليم") },
+            )
             FingerprintButton(
-                pick?.let { "افتح جلسة $it بالبصمة" } ?: "اختر مشروع", "انفتحت", listOf("بصمتك", "تنفتح الجلسة"), enabled = pick != null,
-                action = { onStep -> onStep(0); actions.openSession(pick!!).also { onStep(1) } },
+                target?.let { if (creating) "سوّ مشروع $it وافتح $tool بالبصمة" else "افتح $tool على $it بالبصمة" } ?: if (creating) "اكتب اسم المشروع" else "اختر مشروع",
+                "انفتحت", listOf("بصمتك", if (creating) "يتسوى المشروع وتنفتح الجلسة" else "تنفتح الجلسة"), enabled = target != null,
+                action = { onStep -> onStep(0); actions.openSession(target!!, codex = codex, create = creating).also { onStep(1) } },
                 onResult = { ok, m -> msg = ok to m },
             )
-            Text("Codex ما ينفتح من هنا للحين، افتحه من تطبيق Codex.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             msg?.let { (ok, m) -> Text(m, color = if (ok) Tone.ok else MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
         }
     }
+}
+
+@Composable
+private fun Pill(label: String, selected: Boolean, onClick: () -> Unit) {
+    Text(label, style = MaterialTheme.typography.labelLarge, color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 8.dp))
 }

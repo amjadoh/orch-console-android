@@ -68,4 +68,16 @@ class ModelsTest {
         val last = Models.task(JSONObject("""{"taskId":"A-0001","status":"failed","attempts":{"total":3,"max":3,"next":null}}"""))
         assertTrue(!last.canRetry)
     }
+
+    @Test
+    fun sessionsOpenNowAndNewProject() {
+        val v = SessionsModel.parse(JSONObject("""{"installed":true,"list":"🟢 المفتوح:\n• orch-console-android — آخر استخدام قبل 3 دقيقة\n\n📂 تقدر تفتح: المصروف، tv-remote\n"}"""))
+        assertEquals(listOf("orch-console-android"), v.openNow)
+        assertEquals(listOf("المصروف", "tv-remote"), v.openable)
+        assertEquals(listOf("orch-console-android", "tv-remote", "المصروف"), v.allProjects)
+        assertNull(validNewProject("متجر العطور", v.allProjects))
+        assertNull(validNewProject("shop_2.0", v.allProjects))
+        assertTrue(validNewProject("TV-Remote", v.allProjects)!!.contains("فيه مشروع"))
+        for (bad in listOf("", " ", "a/b", "-x", "a..b", "x.bak", "app-e2194b3", "it's", "a".repeat(41))) assertTrue(bad, validNewProject(bad, v.allProjects) != null)
+    }
 }

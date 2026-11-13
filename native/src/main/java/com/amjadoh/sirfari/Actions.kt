@@ -45,11 +45,13 @@ class Actions(val api: Api, private val signer: Signer, private val device: Devi
         throw Api.Failure("المنظّم ما رد، شيّك بعد شوي")
     }
 
-    // ── الجلسات (Claude على الجوال/اللابتوب) ──
-    suspend fun openSession(project: String): String {
-        val o = api.post("/api/session/options", JSONObject().put("project", project))
-        val credential = signer.signOptions(o.getJSONObject("publicKey"), "افتح جلسة $project")
-        val r = api.post("/api/session/request", JSONObject().put("action", "open").put("project", o.getString("project"))
+    // ── الجلسات (Claude على الجوال/اللابتوب، وCodex في تطبيق ChatGPT) ──
+    /** فتح جلسة Claude أو Codex، ولو create: يتسوى المشروع أول. الخيارين داخل البصمة (التحدي يغطيهم) */
+    suspend fun openSession(project: String, codex: Boolean = false, create: Boolean = false): String {
+        fun JSONObject.opts() = apply { if (codex) put("tool", "codex"); if (create) put("create", true) }
+        val o = api.post("/api/session/options", JSONObject().put("project", project).opts())
+        val credential = signer.signOptions(o.getJSONObject("publicKey"), "${if (create) "سوّ مشروع $project و" else ""}افتح ${if (codex) "Codex" else "جلسة"} $project")
+        val r = api.post("/api/session/request", JSONObject().put("action", "open").put("project", o.getString("project")).opts()
             .put("nonce", o.getString("nonce")).put("createdAt", o.getLong("createdAt")).put("credential", credential))
         return waitSession(r.getString("nonce"))
     }
