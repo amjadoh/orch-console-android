@@ -37,12 +37,21 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-// كل جلسات Claude وCodex على السيرفر، من أي مكان انفتحت. القفل بالبصمة لجلسة بعينها، وما تنقفل إلا لو نايمة.
-// الفتح: جلسة Claude لمشروع (تطلع في تطبيق Claude). Codex ما ينفتح من هنا للحين.
+// كل جلسات Claude وCodex اللي تاخذ من رام السيرفر، من أي مكان انفتحت. الحالة من hooks حق Claude Code (صادقة):
+// تشتغل / تحتاجك / جاهزة / غير معروف. القفل بالبصمة لجلسة Claude بعينها، بس لو جاهزة من 10 دقايق
+// (أو غير معروفة مع تأكيدك). Codex يظهر برامه بس (ما فيه طريقة رسمية تقفله من برّا).
 
-data class SessionInfo(val id: String, val pid: Int, val start: Long, val kind: String, val label: String, val project: String?, val ageSec: Long?, val rssMb: Long?, val idleSec: Long?) {
-    val busy get() = idleSec != null && idleSec < 600
+data class SessionInfo(val id: String, val pid: Int, val start: Long, val kind: String, val label: String, val project: String?, val ageSec: Long?, val rssMb: Long?, val state: String, val stateSec: Long?) {
     val isCodex get() = kind.startsWith("codex")
+    val unknown get() = state == "unknown"
+    /** ينفع يتقفل؟ null = إيه، وإلا السبب */
+    val blockReason: String? get() = when {
+        isCodex -> "Codex يتقفل من تطبيق Codex"
+        state == "working" -> "تشتغل الحين"
+        state == "needs" -> "تنتظر موافقتك على شي"
+        state == "ready" && (stateSec ?: 0) < 600 -> "خلصت ردها قبل شوي، يمكن ترجع لها"
+        else -> null
+    }
 }
 data class SessionsView(val all: List<SessionInfo>, val stale: Boolean, val openable: List<String>, val installed: Boolean)
 
@@ -54,7 +63,7 @@ object SessionsModel {
             SessionInfo(it.optString("id"), it.optInt("pid"), it.optLong("start"), it.optString("kind"), it.optString("label"),
                 it.optString("project").takeIf { p -> p.isNotBlank() && p != "null" },
                 if (it.isNull("ageSec")) null else it.optLong("ageSec"), if (it.isNull("rssMb")) null else it.optLong("rssMb"),
-                if (it.isNull("idleSec")) null else it.optLong("idleSec"))
+                it.optString("state", "unknown"), if (it.isNull("stateSec")) null else it.optLong("stateSec"))
         }
         // «📂 تقدر تفتح: a، b، c» من قائمة rc-ctl
         val line = o.optString("list").lines().firstOrNull { it.contains("تقدر تفتح") }
@@ -92,7 +101,7 @@ fun SessionsSection(v: SessionsView?, actions: Actions, onChanged: () -> Unit) {
                             Text(s.project ?: s.label, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text("${s.label} · صار لها ${dur(s.ageSec)} · ${s.rssMb ?: "—"} ميجا", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                         }
-                        if (s.busy) Chip("شغّالة", Tone.run) else Chip("نايمة ${dur(s.idleSec)}", Tone.idle)
+                        StateChip(s)
                     }
                 }
             }
@@ -101,6 +110,14 @@ fun SessionsSection(v: SessionsView?, actions: Actions, onChanged: () -> Unit) {
     }
     stop?.let { s -> StopSheet(s, actions, onClose = { stop = null }, onDone = onChanged) }
     if (open) OpenSheet(v.openable, actions, onClose = { open = false }, onDone = onChanged)
+}
+
+@Composable
+fun StateChip(s: SessionInfo) = when (s.state) {
+    "working" -> Chip("تشتغل", Tone.run)
+    "needs" -> Chip("تحتاجك", Tone.warn)
+    "ready" -> Chip("جاهزة · ${dur(s.stateSec)}", Tone.ok)
+    else -> Chip("غير معروف", Tone.idle)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -114,26 +131,33 @@ private fun StopSheet(s: SessionInfo, actions: Actions, onClose: () -> Unit, onD
             Chip(s.label, if (s.isCodex) Tone.action else Tone.warn)
             Text(s.project ?: s.label, style = MaterialTheme.typography.headlineSmall)
             Panel(padding = 16) {
-                Text("صار لها ${dur(s.ageSec)} · تاخذ ${s.rssMb ?: "—"} ميجا · ${if (s.busy) "شغّالة الحين" else "نايمة من ${dur(s.idleSec)}"}", style = MaterialTheme.typography.bodyMedium)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StateChip(s)
+                    Text("صار لها ${dur(s.ageSec)} · تاخذ ${s.rssMb ?: "—"} ميجا", style = MaterialTheme.typography.bodyMedium)
+                }
                 Text(
-                    if (s.kind == "claude-rc") "جلسة فتحتها من سيرفري: تنقفل على طول، وتقدر تفتحها مرة ثانية من «افتح جلسة»."
-                    else "تنقفل بهدوء (مثل ما تسكرها من التطبيق). المحادثة نفسها محفوظة وتقدر تكمّلها من تطبيق ${if (s.isCodex) "Codex" else "Claude"}. لو كانت شغّالة لحظة القفل، ما تنقفل.",
+                    when {
+                        s.isCodex -> "Codex ما فيه طريقة رسمية تقفله من برّا. اقفل المحادثة من تطبيق Codex."
+                        s.kind == "claude-rc" -> "جلسة فتحتها من سيرفري: تنقفل نهائياً (ما ترجع تنفتح لحالها)، وتقدر تفتحها مرة ثانية من «افتح جلسة»."
+                        else -> "تنقفل بهدوء، والمحادثة محفوظة وتقدر تكمّلها من تطبيق Claude. وقت القفل يتأكد من جديد إنها ما تشتغل."
+                    },
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (s.kind == "claude-rc") {
-                val scope = LocalAppScope.current ?: rememberCoroutineScope()
-                var busy by remember { mutableStateOf(false) }
-                androidx.compose.material3.Button(
-                    enabled = !busy && s.project != null, modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
-                    onClick = { busy = true; scope.launch { msg = runCatching { actions.sessionNoFingerprint("close", s.project!!) }.fold({ true to it }, { false to (it.message ?: "صار خطأ") }); busy = false } },
-                ) { Text("اقفلها") }
-            } else FingerprintButton(
-                "اقفلها بالبصمة", "انقفلت", listOf("بصمتك", "يتأكد إنها نايمة", "يقفلها"), enabled = !s.busy,
-                action = { onStep -> onStep(0); actions.stopSession(s) { onStep(1) } },
+            var sure by remember { mutableStateOf(false) }
+            if (s.unknown && !s.isCodex) Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { sure = !sure },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                androidx.compose.material3.Checkbox(checked = sure, onCheckedChange = { sure = it })
+                Text("حالتها غير معروفة (انفتحت قبل التحديث). متأكد إنها مو شغّالة", style = MaterialTheme.typography.bodyMedium)
+            }
+            val reason = s.blockReason
+            if (reason == null) FingerprintButton(
+                "اقفلها بالبصمة", "انقفلت", listOf("بصمتك", "يتأكد من حالتها", "يقفلها"), enabled = !s.unknown || sure,
+                action = { onStep -> onStep(0); actions.stopSession(s, force = s.unknown && sure) { onStep(1) } },
                 onResult = { ok, m -> msg = ok to m },
-            )
-            if (s.busy) Text("شغّالة الحين (آخر 10 دقايق)، فما تنقفل عشان ما ينقطع شغل.", color = Tone.warn, style = MaterialTheme.typography.bodySmall)
+            ) else Text("ما تنقفل الحين: $reason", color = Tone.warn, style = MaterialTheme.typography.bodyMedium)
             msg?.let { (ok, m) -> Text(m, color = if (ok) Tone.ok else MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
         }
     }
