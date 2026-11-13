@@ -49,6 +49,11 @@ foreach ($ev in 'SessionStart', 'UserPromptSubmit', 'PermissionRequest', 'Notifi
   $settings.hooks | Add-Member -NotePropertyName $ev -NotePropertyValue @($list) -Force
   $added++
 }
+# Drop a Sirfari PostToolUse hook left by an older version (it slows Claude down on Windows)
+if ($settings.hooks.PSObject.Properties.Name -contains 'PostToolUse') {
+  $keep = @(@($settings.hooks.PostToolUse) | Where-Object { -not (@($_.hooks) | Where-Object { [string]$_.command -like '*Sirfari*hook.ps1*' }) })
+  if ($keep.Count -eq 0) { $settings.hooks.PSObject.Properties.Remove('PostToolUse') } else { $settings.hooks | Add-Member -NotePropertyName PostToolUse -NotePropertyValue $keep -Force }
+}
 [IO.File]::WriteAllText($settingsPath, ($settings | ConvertTo-Json -Depth 20), $utf8)
 Write-Host "Claude: added $added hooks (existing settings kept)."
 

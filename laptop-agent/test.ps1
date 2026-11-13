@@ -43,7 +43,7 @@ Check ($c.state -eq 'ready' -and $c.tool -eq 'codex' -and $c.project -eq 'octopu
 
 # ── التركيب: يحافظ على الموجود، ومرتين ما يكرر ──
 $claudeDir = Join-Path $env:USERPROFILE '.claude'; New-Item -ItemType Directory -Force $claudeDir | Out-Null
-[IO.File]::WriteAllText((Join-Path $claudeDir 'settings.json'), '{"theme":"dark","env":{"X":"1"},"hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo hi"}]}]}}')
+[IO.File]::WriteAllText((Join-Path $claudeDir 'settings.json'), '{"theme":"dark","env":{"X":"1"},"hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo hi"}]}],"PostToolUse":[{"matcher":"*","hooks":[{"type":"command","command":"powershell.exe -File C:\\x\\Sirfari\\hook.ps1"}]}]}}')
 $codexDir = Join-Path $env:USERPROFILE '.codex'; New-Item -ItemType Directory -Force $codexDir | Out-Null
 [IO.File]::WriteAllText((Join-Path $codexDir 'config.toml'), "model = `"gpt-5`"`r`n[projects.x]`r`ntrust_level = `"trusted`"`r`n")
 $env:SIRFARI_SOURCE = $here
