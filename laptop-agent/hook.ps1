@@ -1,6 +1,7 @@
-# سيرفري: hook لـ Claude Code على لابتوب أمجد (ويندوز). يكتب حالة الجلسة في ملف محلي بس (سريع، بدون شبكة).
-# SessionStart/Stop = جاهزة، UserPromptSubmit/PostToolUse = تشتغل، PermissionRequest/Notification = تحتاجك، SessionEnd = انتهت.
-# Stop وفيه مهام خلفية = تشتغل. أي خطأ = نطلع بصمت عشان ما نعطّل الجلسة أبداً.
+# Sirfari: Claude Code hook on Amjad's Windows laptop. Writes the session state to a local file only (fast, no network).
+# SessionStart/Stop = ready, UserPromptSubmit/PostToolUse = working, PermissionRequest/Notification = needs, SessionEnd = ended.
+# Stop with background tasks still running = working. Any error = exit quietly so the session is never disturbed.
+# (ASCII only on purpose: Windows PowerShell 5.1 misreads non-ASCII .ps1 files without a BOM.)
 $ErrorActionPreference = 'SilentlyContinue'
 try {
   $raw = [Console]::In.ReadToEnd()

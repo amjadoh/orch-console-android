@@ -1,10 +1,11 @@
-# تركيب sirfari-agent على لابتوب أمجد (ويندوز)، مرة وحدة، بدون صلاحيات مدير:
+# Install sirfari-agent on Amjad's Windows laptop, once, no admin rights needed:
 #   irm https://amjad-server.tail6b6055.ts.net/agent/install.ps1 | iex
-# 1) ينزّل السكربتات من سيرفري (عبر Tailscale) لـ %LOCALAPPDATA%\Sirfari
-# 2) يضيف hooks لـ Claude Code في %USERPROFILE%\.claude\settings.json (نسخة احتياطية قبل، وما يمسح شي موجود)
-# 3) يضيف notify لـ Codex في %USERPROFILE%\.codex\config.toml (لو ما فيه notify من قبل)
-# 4) يشغّل الـ agent الحين ومع كل دخول للجهاز (مهمة مجدولة، أو اختصار في Startup لو المهمة ما انقبلت)
-# للتجربة: SIRFARI_SOURCE = مجلد فيه السكربتات بدل التنزيل، وSIRFARI_NO_START=1 ما يشغّل الـ agent.
+# 1) downloads the scripts from Sirfari (over Tailscale) to %LOCALAPPDATA%\Sirfari
+# 2) adds Claude Code hooks to %USERPROFILE%\.claude\settings.json (backup first, keeps everything that is there)
+# 3) adds Codex notify to %USERPROFILE%\.codex\config.toml (only if there is no notify yet)
+# 4) starts the agent now and at every logon (scheduled task, or a Startup shortcut if the task is refused)
+# Testing: SIRFARI_SOURCE = folder with the scripts instead of downloading; SIRFARI_NO_START=1 does not start the agent.
+# (ASCII only on purpose: Windows PowerShell 5.1 and `irm | iex` both read it correctly.)
 $ErrorActionPreference = 'Stop'
 $server = 'https://amjad-server.tail6b6055.ts.net'
 $base = if ($env:SIRFARI_HOME) { $env:SIRFARI_HOME } else { Join-Path $env:LOCALAPPDATA 'Sirfari' }
@@ -12,14 +13,14 @@ $utf8 = New-Object Text.UTF8Encoding $false
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
 New-Item -ItemType Directory -Force -Path (Join-Path $base 'events') | Out-Null
 
-Write-Host 'سيرفري: أنزّل السكربتات...'
+Write-Host 'Sirfari: downloading the scripts...'
 foreach ($name in 'hook.ps1', 'codex-notify.ps1', 'agent.ps1') {
   $dest = Join-Path $base $name
   if ($env:SIRFARI_SOURCE) { Copy-Item -LiteralPath (Join-Path $env:SIRFARI_SOURCE $name) -Destination $dest -Force }
   else { Invoke-WebRequest -Uri "$server/agent/$name" -OutFile $dest -UseBasicParsing }
 }
 
-# ── Claude Code: hooks ──
+# -- Claude Code: hooks --
 $claudeDir = Join-Path $env:USERPROFILE '.claude'
 $settingsPath = Join-Path $claudeDir 'settings.json'
 New-Item -ItemType Directory -Force -Path $claudeDir | Out-Null
@@ -48,24 +49,24 @@ foreach ($ev in 'SessionStart', 'UserPromptSubmit', 'PostToolUse', 'PermissionRe
   $added++
 }
 [IO.File]::WriteAllText($settingsPath, ($settings | ConvertTo-Json -Depth 20), $utf8)
-Write-Host "Claude: انضاف $added hook (الموجود ما تغيّر)."
+Write-Host "Claude: added $added hooks (existing settings kept)."
 
-# ── Codex: notify (مفتاح في أول الملف، قبل أي [قسم]) ──
+# -- Codex: notify (a top-level key: must go before any [table]) --
 $codexDir = Join-Path $env:USERPROFILE '.codex'
 $codexCfg = Join-Path $codexDir 'config.toml'
 New-Item -ItemType Directory -Force -Path $codexDir | Out-Null
 $cfgText = if (Test-Path $codexCfg) { [IO.File]::ReadAllText($codexCfg) } else { '' }
 if ($cfgText -match '(?m)^\s*notify\s*=') {
-  if ($cfgText -notmatch 'codex-notify\.ps1') { Write-Host 'Codex: فيه notify من قبل، ما غيّرته (حالة Codex بتطلع «غير معروف»).' }
+  if ($cfgText -notmatch 'codex-notify\.ps1') { Write-Host 'Codex: a notify is already set, left it as is (Codex state will show as unknown).' }
 } else {
   if (Test-Path $codexCfg) { Copy-Item -LiteralPath $codexCfg -Destination "$codexCfg.bak-sirfari-$(Get-Date -Format yyyyMMddHHmmss)" -Force }
   $notifyPath = (Join-Path $base 'codex-notify.ps1')
   $line = "notify = [`"powershell.exe`", `"-NoProfile`", `"-ExecutionPolicy`", `"Bypass`", `"-File`", '$notifyPath']"
   [IO.File]::WriteAllText($codexCfg, "$line`r`n$cfgText", $utf8)
-  Write-Host 'Codex: انضاف notify.'
+  Write-Host 'Codex: notify added.'
 }
 
-# ── تشغيل الـ agent الحين ومع كل دخول ──
+# -- start the agent now and at every logon --
 $agentArgs = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$(Join-Path $base 'agent.ps1')`""
 if (-not $env:SIRFARI_NO_START) {
   $ok = $false
@@ -77,7 +78,7 @@ if (-not $env:SIRFARI_NO_START) {
     Register-ScheduledTask -TaskName 'Sirfari Agent' -Action $action -Trigger $trigger -Principal $principal -Settings $set -Force | Out-Null
     Start-ScheduledTask -TaskName 'Sirfari Agent'
     $ok = $true
-    Write-Host 'الـ agent يشتغل الحين ومع كل دخول (مهمة مجدولة).'
+    Write-Host 'Agent running now and at every logon (scheduled task).'
   } catch {}
   if (-not $ok) {
     $startup = [Environment]::GetFolderPath('Startup')
@@ -88,7 +89,7 @@ if (-not $env:SIRFARI_NO_START) {
     $lnk.WindowStyle = 7
     $lnk.Save()
     Start-Process powershell.exe -ArgumentList $agentArgs -WindowStyle Hidden
-    Write-Host 'الـ agent يشتغل الحين ومع كل دخول (اختصار في Startup).'
+    Write-Host 'Agent running now and at every logon (Startup shortcut).'
   }
 }
-Write-Host '✅ خلص. افتح سيرفري ← السيرفر ← الجلسات: اللابتوب يطلع خلال دقيقة. الجلسات المفتوحة الحين تبلّغ من أول رسالة جاية.'
+Write-Host 'Done. Open Sirfari > Server > Sessions: the laptop shows up within a minute. Sessions already open report from their next message.'

@@ -1,5 +1,5 @@
-# سيرفري: notify حق Codex على لابتوب أمجد (ويندوز). Codex يناديه لما يخلص رد (agent-turn-complete) ويعطيه JSON كآخر معامل.
-# يكتب «جاهزة» للمحادثة في ملف محلي بس. أي خطأ = نطلع بصمت.
+# Sirfari: Codex notify on Amjad's Windows laptop. Codex calls it when a turn completes (agent-turn-complete), JSON as the last argument.
+# Writes "ready" for the thread to a local file only. Any error = exit quietly. (ASCII only, see hook.ps1.)
 $ErrorActionPreference = 'SilentlyContinue'
 try {
   $j = $args[-1] | ConvertFrom-Json

@@ -1,4 +1,4 @@
-# اختبار sirfari-agent على ويندوز حقيقي (GitHub): الـ hook وnotify والتركيب (مرتين، بدون ما يمسح الموجود) والتقرير.
+﻿# اختبار sirfari-agent على ويندوز حقيقي (GitHub): الـ hook وnotify والتركيب (مرتين، بدون ما يمسح الموجود) والتقرير.
 # السكربتات هنا نسخة من ops/console/public/agent في مستودع المنظّم (هناك تنخدم للابتوب)، والاختبار يتأكد إنها تشتغل على ويندوز.
 $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -34,7 +34,10 @@ Hook 'not json'
 Check ($LASTEXITCODE -eq 0) 'مدخل خربان = ما يطيح'
 
 # ── Codex notify ──
-& $shell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $here 'codex-notify.ps1') '{"type":"agent-turn-complete","thread-id":"t1","cwd":"C:\\work\\octopus"}'
+$nj = '{"type":"agent-turn-complete","thread-id":"t1","cwd":"C:\\work\\octopus"}'
+# Windows PowerShell 5.1 يشيل علامات التنصيص من معاملات البرامج الخارجية، وCodex نفسه يمررها صح (CreateProcess)
+if ($PSVersionTable.PSVersion.Major -lt 7) { $nj = $nj -replace '"', '\"' }
+& $shell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $here 'codex-notify.ps1') $nj
 $c = Ev 'codex-t1'
 Check ($c.state -eq 'ready' -and $c.tool -eq 'codex' -and $c.project -eq 'octopus') 'Codex notify = جاهزة'
 

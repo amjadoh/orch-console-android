@@ -1,6 +1,6 @@
-# sirfari-agent على لابتوب أمجد (ويندوز): كل دقيقة يرسل لسيرفري جلسات Claude وCodex اللي على اللابتوب وحالتها،
-# عبر Tailscale (هوية Tailscale تثبت إنه جهاز أمجد، فما فيه أي سر محفوظ). بيانات بس: ما يستقبل أوامر ولا ينفّذ شي.
-#   -Once: مرة وحدة وبس (للتجربة)   -DryRun <ملف>: يكتب التقرير في ملف بدل ما يرسله
+# sirfari-agent on Amjad's Windows laptop: every minute, reports the laptop's Claude/Codex sessions and their state to Sirfari
+# over Tailscale (the Tailscale identity proves it is Amjad's device, so no secret is stored). Data only: it never receives commands.
+#   -Once: run once   -DryRun <file>: write the report to a file instead of sending it   (ASCII only, see hook.ps1.)
 param([switch]$Once, [string]$DryRun = '')
 $ErrorActionPreference = 'Stop'
 $server = 'https://amjad-server.tail6b6055.ts.net'
@@ -18,7 +18,7 @@ function Get-Report {
   foreach ($f in @(Get-ChildItem -LiteralPath (Join-Path $base 'events') -Filter '*.json' -ErrorAction SilentlyContinue)) {
     try {
       $e = [IO.File]::ReadAllText($f.FullName) | ConvertFrom-Json
-      # جلسة ما تحرّكت يومين = غالباً انقفلت بدون SessionEnd: نشيلها
+      # untouched for two days = probably closed without SessionEnd: drop it
       if ($now - [int64]$e.at -gt 172800000) { Remove-Item -LiteralPath $f.FullName -Force; continue }
       $sessions += [ordered]@{ sessionId = [string]$e.sessionId; tool = [string]$e.tool; project = $e.project; state = [string]$e.state; at = [int64]$e.at }
     } catch {}
