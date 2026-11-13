@@ -38,7 +38,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 // «الإجراءات الذكية»: وصفات صيانة ثابتة من السيرفر (ops/maintenance/catalog.mjs). التطبيق يعرض وش بيصير،
-// وبعد بصمتك root يعيد فحص «مشغول؟» وينفّذ أوامر ثابتة ويتحقق. التطبيق ما يرسل أوامر أبداً، معرّف الوصفة بس.
+// وبعد بصمتك root يعيد فحص «مشغول؟» وينفذ أوامر ثابتة ويتحقق. التطبيق ما يرسل أوامر أبدا، معرف الوصفة بس.
 
 data class Guard(val state: String, val why: String)
 data class Recipe(
@@ -79,7 +79,7 @@ fun SmartActions(c: Catalog?) {
     if (c == null || !c.available) return
     val open = LocalOpenRecipe.current
     var all by rememberSaveable { mutableStateOf(false) }
-    Section("إجراءات ذكية", if (all) "اطوِ" else "كل الإجراءات", { all = !all }) {
+    Section("إجراءات ذكية", if (all) "اطو" else "كل الإجراءات", { all = !all }) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (c.suggestions.isEmpty() && !all) Panel(padding = 14) {
                 Text("ما فيه شي يحتاج إجراء الحين", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -154,7 +154,7 @@ fun RecipeSheet(r: Recipe, why: String?, actions: Actions, onClose: () -> Unit, 
                 Fact("التراجع", r.rollback)
                 if (r.guard.why.isNotBlank()) Fact("الحين", r.guard.why)
             }
-            Text("وقت التنفيذ root يتأكد من جديد إنه ما يقطع شي. لو مشغول ما ينفّذ ويقول لك.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("وقت التنفيذ root يتأكد من جديد إنه ما يقطع شي. لو مشغول ما ينفذ ويقول لك.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (r.protected) Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { agree = !agree }.padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -164,7 +164,7 @@ fun RecipeSheet(r: Recipe, why: String?, actions: Actions, onClose: () -> Unit, 
             }
             if (r.pending) Text("نفس الإجراء ينتظر بصمتك في «يحتاج قرارك».", color = Tone.warn, style = MaterialTheme.typography.bodySmall)
             FingerprintButton(
-                "اطلب ووافق بالبصمة", "تم", listOf("إرسال الطلب لـ root", "بصمتك", "root يفحص وينفّذ"), enabled = agree && !r.pending,
+                "اطلب ووافق بالبصمة", "تم", listOf("إرسال الطلب لـ root", "بصمتك", "root يفحص وينفذ"), enabled = agree && !r.pending,
                 action = { onStep ->
                     onStep(0)
                     val req = actions.requestRecipe(r.id, why.orEmpty())

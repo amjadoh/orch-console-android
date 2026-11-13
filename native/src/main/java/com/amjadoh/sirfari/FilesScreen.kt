@@ -39,7 +39,7 @@ private val dateFmt = SimpleDateFormat("d MMM yyyy", Locale("ar"))
 
 /**
  * المخرجات (طلب أمجد): مخرجات مو كل الملفات.
- * - مشروع فيه فيديوهات: كل الفيديوهات والصور (تدخل عليه وتشغّلها).
+ * - مشروع فيه فيديوهات: كل الفيديوهات والصور (تدخل عليه وتشغلها).
  * - باقي المشاريع: آخر إصدار بس (أحدث APK، ولو ما فيه فأحدث ملف)، وينزل بضغطة.
  */
 @Composable
@@ -113,7 +113,7 @@ private fun LatestRelease(api: Api, r: JSONObject) {
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
             note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Tone.ok) }
         }
-        if (file != null) androidx.compose.material3.Icon(SirfariIcons.Files, "نزّل", tint = MaterialTheme.colorScheme.primary)
+        if (file != null) androidx.compose.material3.Icon(SirfariIcons.Files, "نزل", tint = MaterialTheme.colorScheme.primary)
     }
 }
 

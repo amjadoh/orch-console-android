@@ -36,7 +36,7 @@ import kotlin.coroutines.resumeWithException
  * المرحلة 0: تجربة إن البصمة الأصلية تشتغل مع السيرفر، قبل بناء التطبيق كامل.
  * 1) الاتصال: يقرا /api/overview عن طريق Tailscale.
  * 2) التسجيل: برمز لمرة وحدة من root (نفس تسجيل أي جهاز)، ومفتاح جديد في Keystore.
- * 3) التجربة: /api/passkey/test (ما يوافق على شي ولا يغيّر شي).
+ * 3) التجربة: /api/passkey/test (ما يوافق على شي ولا يغير شي).
  */
 class MainActivity : FragmentActivity() {
     private val api = Api()
@@ -83,7 +83,7 @@ class MainActivity : FragmentActivity() {
         val prompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 val s = result.cryptoObject?.signature
-                if (s != null) cont.resume(s) else cont.resumeWithException(IllegalStateException("البصمة ما رجّعت موقّع"))
+                if (s != null) cont.resume(s) else cont.resumeWithException(IllegalStateException("البصمة ما رجعت موقع"))
             }
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 if (cont.isActive) cont.resumeWithException(Api.Failure(errString.toString()))
@@ -135,7 +135,7 @@ class MainActivity : FragmentActivity() {
         return "انسجل الجوال ✓ (المفتاح داخل الجوال وما يطلع منه)"
     }
 
-    /** ربط بدون رمز root: نسجّل مفتاح الجوال، ويطلع رمز، وتوافق ببصمتك من تطبيقك الحالي */
+    /** ربط بدون رمز root: نسجل مفتاح الجوال، ويطلع رمز، وتوافق ببصمتك من تطبيقك الحالي */
     private suspend fun link(onCode: (String) -> Unit): String {
         val opts = api.post("/api/link/options", JSONObject())
         val linkId = opts.getString("linkId")
@@ -161,25 +161,25 @@ class MainActivity : FragmentActivity() {
             val st = runCatching { api.get("/api/link/status?id=$linkId").optString("state") }.getOrNull() ?: return@repeat
             when (st) {
                 "done" -> { device.saveEnrollment(credId); return "انربط الجوال ✓ (المفتاح داخل الجوال وما يطلع منه)" }
-                "gone" -> { device.forget(); throw Api.Failure("طلب الربط انرفض أو انتهى. جرّب مرة ثانية") }
+                "gone" -> { device.forget(); throw Api.Failure("طلب الربط انرفض أو انتهى. جرب مرة ثانية") }
             }
         }
         device.forget()
-        throw Api.Failure("انتهت مهلة الربط. جرّب مرة ثانية")
+        throw Api.Failure("انتهت مهلة الربط. جرب مرة ثانية")
     }
 
     private suspend fun testFingerprint(): String {
-        val id = device.credentialId ?: throw Api.Failure("سجّل الجوال أول")
+        val id = device.credentialId ?: throw Api.Failure("سجل الجوال أول")
         val opts = api.post("/api/passkey/test/options", JSONObject())
         val pk = opts.getJSONObject("publicKey")
         val allowed: JSONArray = pk.getJSONArray("allowCredentials")
-        if ((0 until allowed.length()).none { allowed.getJSONObject(it).getString("id") == id }) throw Api.Failure("الجوال مو مسجّل في السيرفر")
+        if ((0 until allowed.length()).none { allowed.getJSONObject(it).getString("id") == id }) throw Api.Failure("الجوال مو مسجل في السيرفر")
         val cd = WebAuthnShape.clientData("webauthn.get", pk.getString("challenge"), appOrigin, packageName)
         val signer = try {
             device.signer()
         } catch (e: android.security.keystore.KeyPermanentlyInvalidatedException) {
             device.forget()
-            throw Api.Failure("انضافت بصمة جديدة للجوال، فالمفتاح بطل. سجّل الجوال من جديد")
+            throw Api.Failure("انضافت بصمة جديدة للجوال، فالمفتاح بطل. سجل الجوال من جديد")
         }
         val sig = authenticate(signer, "تجربة فقط، ما توافق على شي")
         val ad = WebAuthnShape.authData(Api.RP_ID, device.nextCounter())
@@ -221,14 +221,14 @@ class MainActivity : FragmentActivity() {
             Button(onClick = { run({ conn = it }) { checkConnection() } }, enabled = !busy) { Text("افحص الاتصال") }
         }
 
-        Section("٢. تسجيل الجوال", enrollMsg ?: if (enrolled) true to "الجوال مسجّل ✓" else null) {
+        Section("٢. تسجيل الجوال", enrollMsg ?: if (enrolled) true to "الجوال مسجل ✓" else null) {
             if (!enrolled) {
                 Text("الأسهل: اربطه من تطبيقك الحالي. يطلع لك رمز هنا، وتوافق عليه ببصمتك في سيرفري الحالي (الطلبات الإدارية).", style = MaterialTheme.typography.bodySmall)
                 Button(onClick = { linkCode = null; run({ enrollMsg = it; linkCode = null }) { link { c -> linkCode = c } } }, enabled = !busy) { Text("اربط من تطبيقك الحالي") }
                 linkCode?.let { full ->
                     val c = full.substringBefore("|")
                     full.substringAfter("|", "").takeIf { it.isNotBlank() }?.let { Text("رقم الطلب: $it (نفسه في Chrome)", style = MaterialTheme.typography.bodySmall) }
-                    // الرمز من اليسار لليمين وبدون مسافة: في الواجهة العربية المسافة كانت تقلب ترتيب النصّين
+                    // الرمز من اليسار لليمين وبدون مسافة: في الواجهة العربية المسافة كانت تقلب ترتيب النصين
                     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr) {
                         Text(c, style = MaterialTheme.typography.displaySmall.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr, letterSpacing = androidx.compose.ui.unit.TextUnit(6f, androidx.compose.ui.unit.TextUnitType.Sp)), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
@@ -240,15 +240,15 @@ class MainActivity : FragmentActivity() {
                     label = { Text("رمز التسجيل") }, modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                 )
-                Button(onClick = { run({ enrollMsg = it }) { enroll(code.trim()) } }, enabled = !busy && code.trim().length >= 11) { Text("سجّل هالجوال") }
+                Button(onClick = { run({ enrollMsg = it }) { enroll(code.trim()) } }, enabled = !busy && code.trim().length >= 11) { Text("سجل هالجوال") }
             } else {
-                OutlinedButton(onClick = { device.forget(); enrolled = false; enrollMsg = null; testMsg = null }, enabled = !busy) { Text("انسَ المفتاح من الجوال") }
+                OutlinedButton(onClick = { device.forget(); enrolled = false; enrollMsg = null; testMsg = null }, enabled = !busy) { Text("انس المفتاح من الجوال") }
             }
         }
 
-        Section("٣. جرّب البصمة", testMsg) {
-            Text("تطلب بصمتك وترسل التوقيع للسيرفر يتحقق منه. ما توافق على شي ولا تغيّر شي.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-            Button(onClick = { run({ testMsg = it }) { testFingerprint() } }, enabled = !busy && enrolled) { Text("جرّب البصمة") }
+        Section("٣. جرب البصمة", testMsg) {
+            Text("تطلب بصمتك وترسل التوقيع للسيرفر يتحقق منه. ما توافق على شي ولا تغير شي.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            Button(onClick = { run({ testMsg = it }) { testFingerprint() } }, enabled = !busy && enrolled) { Text("جرب البصمة") }
         }
 
         Text(appOrigin, style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)

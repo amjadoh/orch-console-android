@@ -65,7 +65,7 @@ enum class Tab(val label: String, val icon: ImageVector) {
 
 private const val REFRESH_MS = 20_000L
 
-/** نطاق التطبيق: القرار بالبصمة يكمّل حتى لو طلعت من صفحة المهمة (ما ينقطع بالنص) */
+/** نطاق التطبيق: القرار بالبصمة يكمل حتى لو طلعت من صفحة المهمة (ما ينقطع بالنص) */
 val LocalAppScope = staticCompositionLocalOf<CoroutineScope?> { null }
 
 /** يزيد مع كل «اسحب للتحديث»: كل شاشة تعيد تحميل بياناتها هي (المساحة، المخرجات، المشاريع، التشخيص) */
@@ -208,7 +208,7 @@ private fun Header(tab: Tab, settings: Boolean, onSettings: () -> Unit, onComman
                 val hour = c.get(Calendar.HOUR_OF_DAY)
                 Text("${DAYS[c.get(Calendar.DAY_OF_WEEK) - 1]} · ${c.get(Calendar.DAY_OF_MONTH)} ${MONTHS[c.get(Calendar.MONTH)]}",
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(if (hour in 4..11) "صباح الخير يا ريّس" else "مساء الخير يا ريّس", style = MaterialTheme.typography.titleLarge)
+                Text(if (hour in 4..11) "صباح الخير يا ريس" else "مساء الخير يا ريس", style = MaterialTheme.typography.titleLarge)
             } else {
                 Text(if (settings) "الإعدادات" else tab.label, style = MaterialTheme.typography.titleLarge)
             }

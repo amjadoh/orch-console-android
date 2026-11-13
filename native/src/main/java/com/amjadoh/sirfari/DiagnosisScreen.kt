@@ -40,7 +40,7 @@ private fun JSONObject.s(k: String) = if (has(k) && !isNull(k)) optString(k).tak
 
 /**
  * التشخيص (نفس بطاقات الويب): كل بطاقة تقول وش صاير، والدليل، والسبب، ووش تسوي، ووش يصير لو ما سويت شي.
- * ومعها: حل جاهز بالبصمة (خدمات المنظّم بس، عن طريق root)، و«اسأل Claude» (استشاري بس)، وطلب صيانة (أوامر تشغّلها انت).
+ * ومعها: حل جاهز بالبصمة (خدمات المنظم بس، عن طريق root)، و«اسأل Claude» (استشاري بس)، وطلب صيانة (أوامر تشغلها انت).
  */
 @Composable
 fun DiagnosisSection(api: Api, onChanged: () -> Unit) {
@@ -155,7 +155,7 @@ private fun AnalysisView(a: JSONObject) {
     }
 }
 
-// ── طلب صيانة: Claude يكتب خطة وأوامر، وانت تشغّلها بنفسك ──
+// ── طلب صيانة: Claude يكتب خطة وأوامر، وانت تشغلها بنفسك ──
 @Composable
 private fun MaintRequest(api: Api, cardKey: String) {
     val scope = rememberCoroutineScope()
@@ -185,7 +185,7 @@ private fun MaintPlans(api: Api) {
                         s.s("command")?.let { Text(it, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr)) }
                     }
                     r.s("rollback")?.let { Text("الرجوع: $it", style = MaterialTheme.typography.bodySmall) }
-                    Text("الأوامر تشغّلها انت بنفسك من الطرفية. التطبيق ما ينفذ شي.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("الأوامر تشغلها انت بنفسك من الطرفية. التطبيق ما ينفذ شي.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 latest?.optString("state") == "failed" -> Text("ما انكتبت الخطة: ${latest.optString("detail")}", color = MaterialTheme.colorScheme.error)
                 else -> Text("Claude يكتب الخطة…", color = Tone.run)
@@ -202,13 +202,13 @@ private fun MaintenanceMode(api: Api, until: Long?, onChanged: () -> Unit) {
     val scope = rememberCoroutineScope()
     val on = until != null && until > System.currentTimeMillis()
     Panel("وضع الصيانة") {
-        Text(if (on) "شغّال لين ${java.text.SimpleDateFormat("h:mm a", java.util.Locale("ar")).format(java.util.Date(until!!))}. الملاحظات مكتومة والحرج يوصل." else "يكتم الملاحظات مؤقتاً وانت تشتغل على السيرفر. الحرج يوصل دايم.",
+        Text(if (on) "شغال لين ${java.text.SimpleDateFormat("h:mm a", java.util.Locale("ar")).format(java.util.Date(until!!))}. الملاحظات مكتومة والحرج يوصل." else "يكتم الملاحظات مؤقتا وانت تشتغل على السيرفر. الحرج يوصل دايم.",
             style = MaterialTheme.typography.bodySmall)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(30 to "نص ساعة", 60 to "ساعة", 120 to "ساعتين").forEach { (m, l) ->
                 OutlinedButton(onClick = { scope.launch { runCatching { api.post("/api/maintenance", JSONObject().put("minutes", m)) }; onChanged() } }) { Text(l) }
             }
-            if (on) Button(onClick = { scope.launch { runCatching { api.post("/api/maintenance", JSONObject().put("minutes", 0)) }; onChanged() } }) { Text("وقّفه") }
+            if (on) Button(onClick = { scope.launch { runCatching { api.post("/api/maintenance", JSONObject().put("minutes", 0)) }; onChanged() } }) { Text("وقفه") }
         }
     }
 }

@@ -32,7 +32,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-// ألوان الحالة (ثابتة، تقرا على الكحلي والأبيض): خلصت / ينتظرك / مشكلة / شغّال / عادي
+// ألوان الحالة (ثابتة، تقرا على الكحلي والأبيض): خلصت / ينتظرك / مشكلة / شغال / عادي
 object Tone {
     val ok = Color(0xFF3FCB8E)
     val warn = Color(0xFFF2B45A)
@@ -89,7 +89,7 @@ fun Chip(text: String, color: Color, filled: Boolean = true) {
     )
 }
 
-/** معرّفات ومسارات (MSR-0002، masroof، app/x.kt): يسار لليمين دايم، بخط ثابت */
+/** معرفات ومسارات (MSR-0002، masroof، app/x.kt): يسار لليمين دايم، بخط ثابت */
 val MonoStyle @Composable get() = MaterialTheme.typography.labelMedium.copy(fontFamily = FontFamily.Monospace, textDirection = TextDirection.Ltr, fontWeight = FontWeight.Normal)
 
 @Composable
@@ -141,7 +141,7 @@ fun FreshnessBar(r: Repo.Result<*>?, now: Long, onRetry: (() -> Unit)? = null) {
     if (!r.offline && !stale) return
     val (color, text) = when {
         r.offline && r.data != null -> Tone.warn to "بدون اتصال · هذي آخر لقطة ${ago(r.at, now)}"
-        r.offline -> Tone.bad to "ما وصلت للسيرفر. تأكد إن Tailscale شغّال"
+        r.offline -> Tone.bad to "ما وصلت للسيرفر. تأكد إن Tailscale شغال"
         else -> Tone.warn to "آخر تحديث ${ago(r.at, now)}"
     }
     Row(
@@ -184,7 +184,7 @@ fun ago(at: Long?, now: Long): String {
 
 fun pct(x: Double?) = if (x == null || x.isNaN()) "—" else "${Math.round(x)}%"
 
-/** حدود التنبيه لكل مقياس (نفسها في الحلقات والأشرطة): swap يحذّر من 25% مثل تنبيه السيرفر */
+/** حدود التنبيه لكل مقياس (نفسها في الحلقات والأشرطة): swap يحذر من 25% مثل تنبيه السيرفر */
 object Limits {
     fun warn(metric: String) = when (metric) { "swap" -> 25.0; "cpu" -> 80.0; else -> 80.0 }
     fun bad(metric: String) = when (metric) { "swap" -> 60.0; else -> 92.0 }

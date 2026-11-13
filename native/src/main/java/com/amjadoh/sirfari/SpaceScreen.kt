@@ -111,7 +111,7 @@ private fun SpaceSummary(api: Api, onOpen: (String) -> Unit, onCat: (String) -> 
     if (top.isNotEmpty()) Panel("أكبر الأماكن") { top.forEach { ItemRow(it, onOpen) } }
     val big = s.optJSONArray("bigFiles").objs()
     if (big.isNotEmpty()) Panel("أكبر الملفات") { big.forEach { ItemRow(it, onOpen) } }
-    TextButton(onClick = { onOpen("/") }) { Text("تصفّح القرص كامل ←") }
+    TextButton(onClick = { onOpen("/") }) { Text("تصفح القرص كامل ←") }
 }
 
 @Composable

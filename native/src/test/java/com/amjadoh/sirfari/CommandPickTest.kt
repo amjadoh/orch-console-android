@@ -6,7 +6,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** «أمر جديد»: لما المنظّم ما يعرف المشروع، تختار مشروع والنص ينرسل له */
+/** «أمر جديد»: لما المنظم ما يعرف المشروع، تختار مشروع والنص ينرسل له */
 class CommandPickTest {
     @Test
     fun namesFromServerMessage() {

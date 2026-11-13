@@ -104,7 +104,7 @@ object Inbox {
 
 class InboxWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
-        // الإشعارات مقفولة: ما نعلّم شي إنه «انشاف»، فيطلع أول ما تفتحها
+        // الإشعارات مقفولة: ما نعلم شي إنه «انشاف»، فيطلع أول ما تفتحها
         if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return Result.success()
         val api = Api()
         val overview = runCatching { api.get("/api/overview") }.getOrElse { return Result.success() } // Tailscale طافي: نحاول المرة الجاية

@@ -32,7 +32,7 @@ object WebAuthnShape {
         "{\"type\":\"${safe(type)}\",\"challenge\":\"${safe(challenge)}\",\"origin\":\"${safe(origin)}\",\"androidPackageName\":\"${safe(packageName)}\"}"
             .toByteArray(Charsets.UTF_8)
 
-    /** authenticatorData: بصمة rpId + الأعلام (حضور + بصمة) + العدّاد، ومع التسجيل معرّف الاعتماد */
+    /** authenticatorData: بصمة rpId + الأعلام (حضور + بصمة) + العداد، ومع التسجيل معرف الاعتماد */
     fun authData(rpId: String, counter: Int, credentialId: ByteArray? = null): ByteArray {
         val rpHash = sha256(rpId.toByteArray(Charsets.UTF_8))
         val flags = FLAG_UP or FLAG_UV or (if (credentialId != null) FLAG_AT else 0)
@@ -47,6 +47,6 @@ object WebAuthnShape {
         return buf.array()
     }
 
-    /** اللي ينوقّع: authenticatorData + sha256(clientDataJSON) */
+    /** اللي ينوقع: authenticatorData + sha256(clientDataJSON) */
     fun toSign(authData: ByteArray, clientData: ByteArray): ByteArray = authData + sha256(clientData)
 }
