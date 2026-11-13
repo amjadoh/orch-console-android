@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -145,7 +146,12 @@ private fun AnalysisView(a: JSONObject) {
         r.optJSONArray("possibleCauses").texts().forEach { Text("• محتمل: $it", style = MaterialTheme.typography.bodySmall) }
         Text("التوصية: ${r.optString("recommendation")}", fontWeight = FontWeight.SemiBold)
         r.s("why")?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        r.optJSONArray("risks").texts().forEach { Text("⚠️ $it", style = MaterialTheme.typography.bodySmall) }
+        r.optJSONArray("risks").texts().forEach { Text("⚠ $it", style = MaterialTheme.typography.bodySmall) }
+        // Claude يقترح إجراء من الكتالوج بس: يفتح ورقته (وش بيصير ← بصمة)
+        r.s("recipe")?.let { id ->
+            val open = LocalOpenRecipe.current
+            TextButton(onClick = { open(id, r.optString("recommendation")) }) { Text("الإجراء المقترح: افتحه ←") }
+        }
     }
 }
 

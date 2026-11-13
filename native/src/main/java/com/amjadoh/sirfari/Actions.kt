@@ -76,7 +76,21 @@ class Actions(val api: Api, private val signer: Signer, private val device: Devi
     }
 
     // ── طلبات root ──
-    suspend fun adminApprove(r: JSONObject): String {
+    /** «الإجراءات الذكية»: يطلب الوصفة (معرّفها بس)، وينتظر root يفتح طلب ينتظر البصمة، ويرجّعه */
+    suspend fun requestRecipe(id: String, reason: String): JSONObject {
+        api.post("/api/fix", JSONObject().put("fix", id).put("reason", reason.take(200)))
+        repeat(30) {
+            delay(700)
+            val list = runCatching { api.get("/api/admin").optJSONArray("requests") }.getOrNull() ?: return@repeat
+            for (i in 0 until list.length()) {
+                val x = list.optJSONObject(i) ?: continue
+                if (x.optString("action") == "fix" && x.optJSONObject("args")?.optString("fix") == id && x.optString("state") == "pending") return x
+            }
+        }
+        throw Api.Failure("root ما استلم الطلب، جرّب بعد شوي")
+    }
+
+    suspend fun adminApprove(r: JSONObject, onSigned: () -> Unit = {}): String {
         val allow = r.optJSONArray("allowCredentials")
         val ids = if (allow == null) emptyList() else (0 until allow.length()).map { allow.optString(it) }
         if (ids.isNotEmpty() && ids.none { it == currentId() }) {
@@ -84,6 +98,7 @@ class Actions(val api: Api, private val signer: Signer, private val device: Devi
         }
         val credential = signer.sign(r.getString("challenge"), ids, "طلب root: ${r.optString("summary").take(60)}", r.optString("rpId", Api.RP_ID))
         api.post("/api/admin/approve", JSONObject().put("id", r.getString("id")).put("credential", credential))
+        onSigned()
         repeat(300) {
             delay(2000)
             val cur = runCatching { api.get("/api/admin") }.getOrNull() ?: return@repeat // التثبيت يعيد تشغيل التطبيق: نصبر
@@ -92,8 +107,15 @@ class Actions(val api: Api, private val signer: Signer, private val device: Devi
                 val x = list.optJSONObject(i) ?: continue
                 if (x.optString("id") != r.getString("id")) continue
                 when (x.optString("state")) {
-                    "done" -> return "✅ root نفّذ الطلب"
-                    "failed", "rejected", "expired" -> throw Api.Failure("الطلب ${x.optString("state")}: ${x.optJSONObject("result")?.optString("error") ?: ""}".trim())
+                    "done" -> return "✅ " + (x.optJSONObject("result")?.optString("note")?.takeIf { it.isNotBlank() && it != "null" } ?: "root نفّذ الطلب")
+                    "blocked" -> throw Api.Failure("⏸️ " + (x.optJSONObject("result")?.optString("note")?.takeIf { it.isNotBlank() && it != "null" } ?: "مشغول، ما تغيّر شي. جرّب بعدين"))
+                    "failed", "rejected", "expired" -> {
+                        val res = x.optJSONObject("result")
+                        val steps = res?.optJSONArray("steps")
+                        val bad = (0 until (steps?.length() ?: 0)).mapNotNull { steps!!.optJSONObject(it) }.firstOrNull { !it.optBoolean("ok") }
+                        val why = listOfNotNull(bad?.optString("name"), bad?.optString("detail")?.takeIf { it.isNotBlank() }).joinToString(": ")
+                        throw Api.Failure(mapOf("failed" to "ما نجح", "rejected" to "انرفض", "expired" to "انتهت مهلته")[x.optString("state")] + (if (why.isNotBlank()) " ($why)" else ""))
+                    }
                 }
             }
         }

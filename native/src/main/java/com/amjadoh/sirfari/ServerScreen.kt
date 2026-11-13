@@ -46,7 +46,7 @@ private data class Metric(val key: String, val label: String, val value: Double?
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ServerScreen(r: Repo.Result<ServerView>?, now: Long, onRetry: () -> Unit = {}, extra: @Composable () -> Unit = {}) {
+fun ServerScreen(r: Repo.Result<ServerView>?, now: Long, onRetry: () -> Unit = {}, smart: @Composable () -> Unit = {}, extra: @Composable () -> Unit = {}) {
     FreshnessBar(r, now, onRetry)
     val s = r?.data ?: run { if (r?.offline != true) LoadState(null, onRetry); return }
     if (s.at == null) { Panel { Text("ما فيه بيانات من جامع السيرفر للحين") }; return }
@@ -95,6 +95,8 @@ fun ServerScreen(r: Repo.Result<ServerView>?, now: Long, onRetry: () -> Unit = {
             }
         }
     }
+
+    smart()
 
     if (s.alerts.isNotEmpty()) Section("التنبيهات") {
         Panel(padding = 0) { s.alerts.forEachIndexed { i, a -> ListRow(divider = i < s.alerts.lastIndex) { StatusLine(Tone.level(a.level), a.text) } } }

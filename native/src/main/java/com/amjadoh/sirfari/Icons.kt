@@ -47,5 +47,6 @@ object SirfariIcons {
     val Warn = lineIcon("warn", "M12 3l10 18H2z", "M12 10v4M12 17.5h.01")
     val Sun = lineIcon("sun", "M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8z", "M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4")
     val Moon = lineIcon("moon", "M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z")
+    val Sparkle = lineIcon("sparkle", "M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z", "M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z")
     val Wifi = lineIcon("link", "M5 12.5a10 10 0 0 1 14 0M8 15.5a6 6 0 0 1 8 0", "M12 19h.01")
 }

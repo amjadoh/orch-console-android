@@ -89,6 +89,8 @@ fun SirfariApp(
     var overview by remember { mutableStateOf<Repo.Result<Overview>?>(null) }
     var server by remember { mutableStateOf<Repo.Result<ServerView>?>(null) }
     var admin by remember { mutableStateOf<JSONObject?>(null) }
+    var catalog by remember { mutableStateOf<Catalog?>(null) }
+    var openRecipe by remember { mutableStateOf<Pair<String, String?>?>(null) }
     var selectedTask by rememberSaveable { mutableStateOf<String?>(null) }
     var showCommand by rememberSaveable { mutableStateOf(false) }
     var refreshing by remember { mutableStateOf(false) }
@@ -104,6 +106,7 @@ fun SirfariApp(
         overview = repo.load("/api/overview", Models::overview)
         if (tab == Tab.Server || tab == Tab.Home || server == null) server = repo.load("/api/server", Models::server)
         if (tab == Tab.Tasks || tab == Tab.Home) admin = runCatching { api.get("/api/admin") }.getOrNull() ?: admin
+        if (tab == Tab.Server || tab == Tab.Home) catalog = runCatching { Maint.catalog(api.get("/api/maint/catalog")) }.getOrNull() ?: catalog
         now = System.currentTimeMillis()
     }
     val refreshNow: () -> Unit = { scope.launch { refresh() } }
@@ -131,7 +134,7 @@ fun SirfariApp(
     val hideNav = !showSettings && tab == Tab.Tasks && selectedTask != null && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 700
 
     // لون النص الافتراضي من الثيم (بدونه يطلع النص أسود على الكحلي)
-    CompositionLocalProvider(LocalAppScope provides scope, LocalRefresh provides tick, androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onBackground) {
+    CompositionLocalProvider(LocalAppScope provides scope, LocalRefresh provides tick, LocalOpenRecipe provides { id, why -> openRecipe = id to why }, androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onBackground) {
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             Column(Modifier.fillMaxSize().statusBarsPadding()) {
                 Header(
@@ -165,8 +168,9 @@ fun SirfariApp(
                                         openTask = { selectedTask = it; tab = Tab.Tasks },
                                         openTasks = { selectedTask = null; tab = Tab.Tasks },
                                         onRetry = refreshNow, onChanged = refreshNow,
+                                        smart = { catalog?.let { c -> c.suggestions.firstOrNull()?.let { s -> c.recipe(s.id)?.let { r -> SuggestionCard(r, s.why) { openRecipe = s.id to s.why } } } } },
                                     )
-                                    tab == Tab.Server -> ServerScreen(server, now, onRetry = refreshNow) { DiagnosisSection(api) { refreshNow() } }
+                                    tab == Tab.Server -> ServerScreen(server, now, onRetry = refreshNow, smart = { SmartActions(catalog) }) { DiagnosisSection(api) { refreshNow() } }
                                     tab == Tab.Space -> SpaceScreen(api)
                                     else -> FilesScreen(api)
                                 }
@@ -180,6 +184,9 @@ fun SirfariApp(
                 modifier = Modifier.align(Alignment.BottomCenter),
             ) { tab = it; showSettings = false }
         }
+    }
+    openRecipe?.let { (id, why) ->
+        catalog?.recipe(id)?.let { r -> CompositionLocalProvider(LocalAppScope provides scope) { RecipeSheet(r, why, actions, onClose = { openRecipe = null }, onDone = refreshNow) } }
     }
     if (showCommand) CommandSheet(api, actions, onClose = { showCommand = false }, onSent = refreshNow)
 }
