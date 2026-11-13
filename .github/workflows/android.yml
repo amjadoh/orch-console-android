@@ -110,3 +110,16 @@ jobs:
           gh release create "$GITHUB_REF_NAME" "out/sirfari-${{ steps.ver.outputs.name }}.apk" out/signing.txt \
             --title "سيرفري ${{ steps.ver.outputs.name }} (أصلي)" \
             --notes "سيرفري الأصلي (Kotlin/Compose). يتحدّث فوق التطبيق الحالي بنفس الحزمة والتوقيع. الرجوع: إصدار TWA برقم أعلى."
+
+  # sirfari-agent للابتوب (ويندوز): نختبر السكربتات على ويندوز حقيقي، بـ PowerShell 7 وWindows PowerShell 5.1
+  laptop-agent:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: PowerShell 7
+        shell: pwsh
+        run: ./laptop-agent/test.ps1
+      - name: Windows PowerShell 5.1
+        shell: powershell
+        run: ./laptop-agent/test.ps1

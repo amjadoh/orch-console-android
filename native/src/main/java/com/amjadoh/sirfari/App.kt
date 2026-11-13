@@ -90,6 +90,7 @@ fun SirfariApp(
     var server by remember { mutableStateOf<Repo.Result<ServerView>?>(null) }
     var admin by remember { mutableStateOf<JSONObject?>(null) }
     var catalog by remember { mutableStateOf<Catalog?>(null) }
+    var sessions by remember { mutableStateOf<SessionsView?>(null) }
     var openRecipe by remember { mutableStateOf<Pair<String, String?>?>(null) }
     var selectedTask by rememberSaveable { mutableStateOf<String?>(null) }
     var showCommand by rememberSaveable { mutableStateOf(false) }
@@ -107,6 +108,7 @@ fun SirfariApp(
         if (tab == Tab.Server || tab == Tab.Home || server == null) server = repo.load("/api/server", Models::server)
         if (tab == Tab.Tasks || tab == Tab.Home) admin = runCatching { api.get("/api/admin") }.getOrNull() ?: admin
         if (tab == Tab.Server || tab == Tab.Home) catalog = runCatching { Maint.catalog(api.get("/api/maint/catalog")) }.getOrNull() ?: catalog
+        if (tab == Tab.Server) sessions = runCatching { SessionsModel.parse(api.get("/api/sessions")) }.getOrNull() ?: sessions
         now = System.currentTimeMillis()
     }
     val refreshNow: () -> Unit = { scope.launch { refresh() } }
@@ -170,7 +172,7 @@ fun SirfariApp(
                                         onRetry = refreshNow, onChanged = refreshNow,
                                         smart = { catalog?.let { c -> c.suggestions.firstOrNull()?.let { s -> c.recipe(s.id)?.let { r -> SuggestionCard(r, s.why) { openRecipe = s.id to s.why } } } } },
                                     )
-                                    tab == Tab.Server -> ServerScreen(server, now, onRetry = refreshNow, smart = { SmartActions(catalog) }) { DiagnosisSection(api) { refreshNow() } }
+                                    tab == Tab.Server -> ServerScreen(server, now, onRetry = refreshNow, smart = { SmartActions(catalog); SessionsSection(sessions, actions, refreshNow) }) { DiagnosisSection(api) { refreshNow() } }
                                     tab == Tab.Space -> SpaceScreen(api)
                                     else -> FilesScreen(api)
                                 }
@@ -206,7 +208,7 @@ private fun Header(tab: Tab, settings: Boolean, onSettings: () -> Unit, onComman
                 val hour = c.get(Calendar.HOUR_OF_DAY)
                 Text("${DAYS[c.get(Calendar.DAY_OF_WEEK) - 1]} · ${c.get(Calendar.DAY_OF_MONTH)} ${MONTHS[c.get(Calendar.MONTH)]}",
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(if (hour in 4..11) "صباح الخير يا أمجد" else "مساء الخير يا أمجد", style = MaterialTheme.typography.titleLarge)
+                Text(if (hour in 4..11) "صباح الخير يا ريّس" else "مساء الخير يا ريّس", style = MaterialTheme.typography.titleLarge)
             } else {
                 Text(if (settings) "الإعدادات" else tab.label, style = MaterialTheme.typography.titleLarge)
             }

@@ -54,6 +54,17 @@ class Actions(val api: Api, private val signer: Signer, private val device: Devi
         return waitSession(r.getString("nonce"))
     }
 
+    /** قفل جلسة بعينها (Claude أو Codex من أي مكان): التحدي يغطي pid ووقت بدايتها، والسيرفر يتأكد إنها نايمة */
+    suspend fun stopSession(s: SessionInfo, force: Boolean = false, onSigned: () -> Unit = {}): String {
+        val target = JSONObject().put("pid", s.pid).put("start", s.start)
+        val o = api.post("/api/session/options", JSONObject().put("action", "stop").put("target", target).put("force", force))
+        val credential = signer.signOptions(o.getJSONObject("publicKey"), "اقفل جلسة ${s.project ?: s.label}")
+        onSigned()
+        val r = api.post("/api/session/request", JSONObject().put("action", "stop").put("target", target).put("force", force)
+            .put("nonce", o.getString("nonce")).put("createdAt", o.getLong("createdAt")).put("credential", credential))
+        return waitSession(r.getString("nonce"))
+    }
+
     suspend fun sessionNoFingerprint(action: String, project: String = ""): String {
         val r = api.post("/api/session/request", JSONObject().put("action", action).put("project", project))
         return waitSession(r.getString("nonce"))
