@@ -65,7 +65,7 @@ enum class Tab(val label: String, val icon: ImageVector) {
 
 private const val REFRESH_MS = 20_000L
 
-/** نطاق التطبيق: القرار بالبصمة يكمل حتى لو طلعت من صفحة المهمة (ما ينقطع بالنص) */
+/** نطاق التطبيق: القرار بالبصمة يكمّل حتى لو طلعت من صفحة المهمة (ما ينقطع بالنص) */
 val LocalAppScope = staticCompositionLocalOf<CoroutineScope?> { null }
 
 /** يزيد مع كل «اسحب للتحديث»: كل شاشة تعيد تحميل بياناتها هي (المساحة، المخرجات، المشاريع، التشخيص) */

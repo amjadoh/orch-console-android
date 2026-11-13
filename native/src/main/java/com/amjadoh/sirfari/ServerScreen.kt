@@ -66,7 +66,7 @@ fun ServerScreen(r: Repo.Result<ServerView>?, now: Long, onRetry: () -> Unit = {
         Mono(s.hostName ?: "السيرفر", Modifier.weight(1f))
         when {
             worst == 0 -> Chip("سليم", Tone.ok)
-            hero.level > 0 -> Chip("${hero.label} ${if (hero.level == 2) "عالية جدا" else "مرتفعة"}", hero.tone)
+            hero.level > 0 -> Chip("${hero.label} ${if (hero.level == 2) "عالية جداً" else "مرتفعة"}", hero.tone)
             else -> Chip("فيه تنبيه", Tone.warn)
         }
     }
@@ -105,7 +105,7 @@ fun ServerScreen(r: Repo.Result<ServerView>?, now: Long, onRetry: () -> Unit = {
     val bad = s.services.filter { it.state != "active" }
     val okCount = s.services.size - bad.size
     val backup = s.timers.firstOrNull { it.kind == "backup" } ?: s.timers.firstOrNull()
-    Section("الخدمات", "$okCount من ${s.services.size} شغالة", { allServices = !allServices }) {
+    Section("الخدمات", "$okCount من ${s.services.size} شغّالة", { allServices = !allServices }) {
         Panel(padding = 0) {
             val shown = if (allServices) s.services else bad
             shown.forEachIndexed { _, v -> ListRow { StatusLine(Tone.state(v.state), v.label + if (v.protected) " · محمية" else "", stateText(v.state), if (v.state != "active") Tone.bad else null) } }
@@ -120,7 +120,7 @@ fun ServerScreen(r: Repo.Result<ServerView>?, now: Long, onRetry: () -> Unit = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Dot(Tone.idle)
                     Text(
-                        if (allServices) "اطو القائمة" else "+ $okCount خدمة سليمة" + (backup?.let { " · ${it.label} ${ago(it.lastAt, now)}" } ?: ""),
+                        if (allServices) "اطوِ القائمة" else "+ $okCount خدمة سليمة" + (backup?.let { " · ${it.label} ${ago(it.lastAt, now)}" } ?: ""),
                         Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                     Icon(SirfariIcons.ChevronDown, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -140,7 +140,7 @@ fun ServerScreen(r: Repo.Result<ServerView>?, now: Long, onRetry: () -> Unit = {
                 val bits = buildList {
                     if (s.load.isNotEmpty()) add("التحميل ${s.load.joinToString(" · ") { "%.2f".format(it) }}")
                     s.mem?.let { add("متاح ${Math.round(it.availMb)} من ${Math.round(it.totalMb)} ميجا") }
-                    s.uptimeSec?.let { add("شغال من ${it / 86400} يوم") }
+                    s.uptimeSec?.let { add("شغّال من ${it / 86400} يوم") }
                     s.tailscaleOnline?.let { add(if (it) "Tailscale متصل" else "Tailscale مو متصل") }
                 }
                 Text(bits.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -199,5 +199,5 @@ private fun Spark(values: List<Double>, color: Color) {
 }
 
 private fun stateText(s: String) = when (s) {
-    "active" -> "شغالة"; "failed" -> "فاشلة"; "inactive" -> "واقفة"; "missing" -> "غير موجودة"; "changing" -> "تتغير"; else -> "غير معروف"
+    "active" -> "شغّالة"; "failed" -> "فاشلة"; "inactive" -> "واقفة"; "missing" -> "غير موجودة"; "changing" -> "تتغيّر"; else -> "غير معروف"
 }

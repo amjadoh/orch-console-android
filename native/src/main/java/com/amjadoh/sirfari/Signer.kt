@@ -12,22 +12,22 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * التوقيع بالبصمة: يطلب بصمة قوية من أندرويد، ويوقع التحدي اللي جا من السيرفر بمفتاح الجوال،
- * ويرجع الاعتماد بنفس شكل WebAuthn. التحدي ما نحسبه هنا أبدا (السيرفر أو root يحسبه)، فالتطبيق
- * ما يقدر يوقع على شي غير اللي طلبه السيرفر.
+ * التوقيع بالبصمة: يطلب بصمة قوية من أندرويد، ويوقّع التحدي اللي جا من السيرفر بمفتاح الجوال،
+ * ويرجّع الاعتماد بنفس شكل WebAuthn. التحدي ما نحسبه هنا أبداً (السيرفر أو root يحسبه)، فالتطبيق
+ * ما يقدر يوقّع على شي غير اللي طلبه السيرفر.
  */
 class Signer(private val activity: FragmentActivity, private val device: DeviceKey, val appOrigin: String) {
 
     /** challenge: base64url من السيرفر، allow: الأجهزة المسموحة (لو الجوال مو منها نوقف قبل البصمة) */
     suspend fun sign(challenge: String, allow: List<String>, subtitle: String, rpId: String = Api.RP_ID): JSONObject {
-        val id = device.credentialId ?: throw Api.Failure("سجل الجوال أول (زر المفتاح فوق)")
+        val id = device.credentialId ?: throw Api.Failure("سجّل الجوال أول (زر المفتاح فوق)")
         if (allow.isNotEmpty() && id !in allow) throw Api.Failure("هالجوال مو من الأجهزة المسموحة لهالطلب")
         val cd = WebAuthnShape.clientData("webauthn.get", challenge, appOrigin, activity.packageName)
         val signer = try {
             device.signer()
         } catch (e: android.security.keystore.KeyPermanentlyInvalidatedException) {
             device.forget()
-            throw Api.Failure("انضافت بصمة جديدة للجوال، فالمفتاح بطل. سجل الجوال من جديد")
+            throw Api.Failure("انضافت بصمة جديدة للجوال، فالمفتاح بطل. سجّل الجوال من جديد")
         }
         val sig = authenticate(signer, subtitle)
         val ad = WebAuthnShape.authData(rpId, device.nextCounter())
@@ -51,7 +51,7 @@ class Signer(private val activity: FragmentActivity, private val device: DeviceK
         val prompt = BiometricPrompt(activity, ContextCompat.getMainExecutor(activity), object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 val s = result.cryptoObject?.signature
-                if (s != null) cont.resume(s) else cont.resumeWithException(IllegalStateException("البصمة ما رجعت موقع"))
+                if (s != null) cont.resume(s) else cont.resumeWithException(IllegalStateException("البصمة ما رجّعت موقّع"))
             }
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 if (cont.isActive) cont.resumeWithException(Api.Failure(errString.toString()))

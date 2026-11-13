@@ -52,7 +52,7 @@ class ScreensTest {
            "mem":{"totalMb":7945,"availMb":3896,"usedMb":4049,"swapTotalMb":4096,"swapUsedMb":1200},
            "disks":[{"mount":"/","pct":61,"usedGb":45,"totalGb":75}],"tailscale":{"state":"Running","online":true},
            "consumers":[{"label":"مدير الأعمال","protected":true,"rssMb":910},{"label":"orchd","protected":false,"rssMb":180}]},
-         "services":[{"label":"المنظم","group":"orch","state":"active","protected":false},{"label":"سيرفري","group":"orch","state":"active"},
+         "services":[{"label":"المنظّم","group":"orch","state":"active","protected":false},{"label":"سيرفري","group":"orch","state":"active"},
                      {"label":"بوت تلقرام","group":"bots","state":"active","protected":true},{"label":"fail2ban","group":"infra","state":"active"}],
          "timers":[{"label":"النسخ الاحتياطي","kind":"backup","result":"success","lastAt":${now - 7_200_000}}]},
          "docker":{"containers":[{"label":"n8n","state":"exited","status":"","onDemand":true}]},
@@ -61,7 +61,7 @@ class ScreensTest {
     private val task = Models.task(JSONObject("""
         {"taskId":"MSR-0002","projectId":"masroof","title":"أضف تصدير PDF للمصروفات","status":"awaiting","first":"Claude","second":"Codex",
          "request":"أضف زر تصدير PDF في شاشة المصروفات الشهرية",
-         "plan":{"summary":"زر جديد في شاشة الشهر يصدر PDF بالعربي","steps":["إضافة PdfExporter","زر في الشاشة","اختبار للحالة الفاضية"],
+         "plan":{"summary":"زر جديد في شاشة الشهر يصدّر PDF بالعربي","steps":["إضافة PdfExporter","زر في الشاشة","اختبار للحالة الفاضية"],
                  "files":["app/src/main/java/PdfExporter.kt"],"risks":["الخط العربي في PDF"],"planner":"Claude"},
          "planState":"ready","planPending":false,"planRevising":false,"revisionsLeft":3,
          "attempts":{"total":1,"max":3,"next":null},
@@ -91,7 +91,7 @@ class ScreensTest {
     @Test @Config(qualifiers = "w411dp-h891dp-xxhdpi")
     fun homeLight() {
         screen("home-light-411", dark = false) { HomeScreen(Repo.Result(overview, now, false, null), Repo.Result(server, now, false, null), admin, now, null, {}, {}) }
-        rule.onNodeWithText("شغال الحين").assertIsDisplayed()
+        rule.onNodeWithText("شغّال الحين").assertIsDisplayed()
     }
 
     @Test @Config(qualifiers = "w840dp-h900dp-xhdpi")
@@ -168,7 +168,7 @@ class ScreensTest {
 
     @Test @Config(qualifiers = "w411dp-h891dp-xxhdpi")
     fun offlineShowsLastSnapshot() {
-        screen("home-offline-411") { HomeScreen(Repo.Result(overview, now - 300_000, true, "ما وصلت للسيرفر. تأكد إن Tailscale شغال"), null, null, now, null, {}, {}) }
+        screen("home-offline-411") { HomeScreen(Repo.Result(overview, now - 300_000, true, "ما وصلت للسيرفر. تأكد إن Tailscale شغّال"), null, null, now, null, {}, {}) }
         rule.onNodeWithText("بدون اتصال", substring = true).assertIsDisplayed()
     }
 

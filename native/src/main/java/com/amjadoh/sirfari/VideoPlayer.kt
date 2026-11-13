@@ -21,7 +21,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 
-/** مشغل فيديو داخل التطبيق (Media3): يشغل من خدمة الملفات مباشرة عن طريق Tailscale، بدون تنزيل */
+/** مشغّل فيديو داخل التطبيق (Media3): يشغّل من خدمة الملفات مباشرة عن طريق Tailscale، بدون تنزيل */
 @Composable
 fun VideoDialog(url: String, onClose: () -> Unit) {
     val ctx = LocalContext.current
@@ -30,7 +30,7 @@ fun VideoDialog(url: String, onClose: () -> Unit) {
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             AndroidView(factory = { PlayerView(it).apply { this.player = player } }, modifier = Modifier.fillMaxSize())
-            TextButton(onClick = onClose, modifier = Modifier.align(Alignment.TopStart).padding(12.dp)) { Text("✕ سكر", color = Color.White) }
+            TextButton(onClick = onClose, modifier = Modifier.align(Alignment.TopStart).padding(12.dp)) { Text("✕ سكّر", color = Color.White) }
         }
     }
 }

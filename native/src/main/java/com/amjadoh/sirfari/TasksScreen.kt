@@ -61,12 +61,12 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 private val STATUS = mapOf(
-    "awaiting" to ("تنتظرك" to Tone.warn), "running" to ("شغالة" to Tone.run), "done" to ("خلصت" to Tone.ok),
+    "awaiting" to ("تنتظرك" to Tone.warn), "running" to ("شغّالة" to Tone.run), "done" to ("خلصت" to Tone.ok),
     "failed" to ("فشلت" to Tone.bad), "cancelled" to ("انلغت" to Tone.idle), "new" to ("جديدة" to Tone.idle),
 )
 fun statusOf(s: String) = STATUS[s] ?: (s to Tone.idle)
 
-private enum class Filter(val label: String) { All("الكل"), Awaiting("تنتظرك"), Running("شغالة"), Done("خلصت"), Failed("فشلت") }
+private enum class Filter(val label: String) { All("الكل"), Awaiting("تنتظرك"), Running("شغّالة"), Done("خلصت"), Failed("فشلت") }
 
 /**
  * المهام: والجوال مقفول قائمة أو مهمة. ولما ينفتح (≥700dp) القائمة يمين والمهمة يسار، وكل عمود يتمرر لحاله.
@@ -202,12 +202,12 @@ private fun TaskRow(t: TaskCard, selected: Boolean, now: Long, onClick: () -> Un
 private fun TaskDetailPane(taskId: String, api: Api, actions: Actions, onSelect: (String?) -> Unit, onChanged: () -> Unit, showBack: Boolean, bottomInset: Int) {
     var t by remember { mutableStateOf<TaskDetail?>(null) }
     var err by remember { mutableStateOf<String?>(null) }
-    var hold by remember { mutableStateOf(false) } // وانت تكتب أو تبصم: ما نحدث تحتك
+    var hold by remember { mutableStateOf(false) } // وانت تكتب أو تبصم: ما نحدّث تحتك
     var reload by remember { mutableIntStateOf(0) }
     val tick = LocalRefresh.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
 
-    // تتحدث كل 4 ثواني بس والتطبيق قدامك والمهمة لسا ماشية (تنتظرك أو شغالة). المنتهية تنقرا مرة وحدة.
+    // تتحدث كل 4 ثواني بس والتطبيق قدامك والمهمة لسا ماشية (تنتظرك أو شغّالة). المنتهية تنقرا مرة وحدة.
     LaunchedEffect(taskId, reload, tick) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
@@ -281,14 +281,14 @@ internal fun TaskBody(d: TaskDetail, onSelect: (String?) -> Unit, showBack: Bool
                     }
                     d.plan.risks.forEach { r -> Chip("⚠ $r", Tone.warn) }
                 }
-                if (d.waitingPlan) Text("المنفذ يعدل الخطة…", color = Tone.run, style = MaterialTheme.typography.bodySmall)
+                if (d.waitingPlan) Text("المنفذ يعدّل الخطة…", color = Tone.run, style = MaterialTheme.typography.bodySmall)
             }
         }
-        d.waitingPlan -> Panel { Text("المنفذ يجهز الخطة…", color = Tone.run) }
+        d.waitingPlan -> Panel { Text("المنفذ يجهّز الخطة…", color = Tone.run) }
         d.planState == "failed" -> Panel { Text("التخطيط فشل: ${d.planFailReason ?: "بدون سبب"}", color = Tone.bad) }
     }
 
-    // آخر الحركات: «مباشر» بس لما المهمة شغالة فعلا. وهي تنتظرك = حركات التخطيط.
+    // آخر الحركات: «مباشر» بس لما المهمة شغّالة فعلاً. وهي تنتظرك = حركات التخطيط.
     d.activity?.takeIf { it.items.isNotEmpty() }?.let { a ->
         val who = a.agent ?: "الوكيل"
         val live = a.live && d.status == "running"
@@ -341,8 +341,8 @@ private fun ContinueYourself(d: TaskDetail) {
     val branch = d.branchUrl ?: return
     val clip = LocalClipboardManager.current
     var copied by remember { mutableStateOf(false) }
-    val line = "كمل على المهمة ${d.taskId} من فرعها: $branch"
-    Section("كمل عليها بنفسك") {
+    val line = "كمّل على المهمة ${d.taskId} من فرعها: $branch"
+    Section("كمّل عليها بنفسك") {
         Panel(padding = 14) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(line, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, maxLines = 3, overflow = TextOverflow.Ellipsis)
@@ -391,8 +391,8 @@ private fun DecisionBar(t: TaskDetail, actions: Actions, onHold: (Boolean) -> Un
         else -> null
     }
     val more = buildList {
-        if (t.status == "awaiting" && t.canSwap) add("switch" to "خل ${t.second} ينفذ")
-        if (t.status == "awaiting") add("cancel" to "ألغ المهمة")
+        if (t.status == "awaiting" && t.canSwap) add("switch" to "خلّ ${t.second} ينفذ")
+        if (t.status == "awaiting") add("cancel" to "ألغِ المهمة")
         if (t.status == "running") add("stop" to "أوقف المهمة")
     }
     if (main == null && more.isEmpty() && msg == null && !t.waitingPlan) return
@@ -429,12 +429,12 @@ private fun DecisionBar(t: TaskDetail, actions: Actions, onHold: (Boolean) -> Un
             }
         }
         if (t.canRevise && t.status == "awaiting") TextButton(onClick = { revising = !revising; onHold(revising) }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
-            Text(if (revising) "رجوع" else "عدل الخطة (باقي ${t.revisionsLeft})", style = MaterialTheme.typography.labelLarge)
+            Text(if (revising) "رجوع" else "عدّل الخطة (باقي ${t.revisionsLeft})", style = MaterialTheme.typography.labelLarge)
         }
         if (revising) {
             OutlinedTextField(
                 value = note, onValueChange = { note = it.take(300) }, minLines = 2, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
-                label = { Text("وش تبغى يتغير في الخطة؟") }, supportingText = { Text("${note.length}/300 · يعيد الخطة بدون ما يعدل أي ملف") },
+                label = { Text("وش تبغى يتغير في الخطة؟") }, supportingText = { Text("${note.length}/300 · يعيد الخطة بدون ما يعدّل أي ملف") },
             )
             Button(enabled = !busy && note.trim().length >= 3, onClick = { go("revise", note.trim()) }, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(16.dp)) { Text("أرسل التعديل بالبصمة") }
         }

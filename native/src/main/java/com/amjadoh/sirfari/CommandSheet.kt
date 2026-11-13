@@ -36,21 +36,21 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-/** من رد المنظم «ما عرفت المشروع. المشاريع: أ، ب، ج» نطلع الأسماء (نفس الأسماء اللي يفهمها المحلل) */
+/** من رد المنظّم «ما عرفت المشروع. المشاريع: أ، ب، ج» نطلع الأسماء (نفس الأسماء اللي يفهمها المحلل) */
 internal fun projectNames(message: String): List<String> =
     message.substringAfter("المشاريع:", "").split("،").map { it.trim() }.filter { it.isNotBlank() && it.length <= 40 }
 
-/** الأمر اللي ما فهمه المنظم (ما فيه مشروع أو فعل يعرفه): نعرض أزرار المشاريع بدل ما يوقف */
+/** الأمر اللي ما فهمه المنظّم (ما فيه مشروع أو فعل يعرفه): نعرض أزرار المشاريع بدل ما يوقف */
 internal fun needsProject(p: JSONObject?): Boolean =
     p != null && !p.optBoolean("sendable") && p.optString("kind") == "error" &&
         p.optString("message").let { it.startsWith("ما فهمت الأمر") || it.startsWith("ما عرفت المشروع") }
 
-/** النص اللي ينرسل فعلا: لو اخترت مشروع، يصير «المشروع: نصك» (المحلل يفهم النقطتين مع اسم مشروع واحد) */
+/** النص اللي ينرسل فعلاً: لو اخترت مشروع، يصير «المشروع: نصك» (المحلل يفهم النقطتين مع اسم مشروع واحد) */
 internal fun composed(text: String, project: String?): String = if (project == null) text.trim() else "$project: ${text.trim()}"
 
 private val SESSION_ROW = Regex("^•\\s*(.+?)\\s+—\\s+(.+)$")
 
-/** «أمر جديد»: تكتب بالعربي، ويوريك وش فهم المنظم، وترسله بالبصمة. ومعه الجلسات المفتوحة وزر قفلها. */
+/** «أمر جديد»: تكتب بالعربي، ويوريك وش فهم المنظّم، وترسله بالبصمة. ومعه الجلسات المفتوحة وزر قفلها. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CommandSheet(api: Api, actions: Actions, onClose: () -> Unit, onSent: () -> Unit) {
@@ -70,7 +70,7 @@ fun CommandSheet(api: Api, actions: Actions, onClose: () -> Unit, onSent: () -> 
         preview = runCatching { api.post("/api/command/preview", JSONObject().put("text", composed(text, pick))) }.getOrNull()
     }
     LaunchedEffect(Unit) {
-        // أسماء المشاريع من المنظم نفسه (نفس اللي يفهمها المحلل)
+        // أسماء المشاريع من المنظّم نفسه (نفس اللي يفهمها المحلل)
         projects = runCatching { projectNames(api.post("/api/command/preview", JSONObject().put("text", "افتح")).optString("message")) }.getOrDefault(emptyList())
     }
     var history by remember { mutableStateOf<org.json.JSONArray?>(null) }
@@ -104,16 +104,16 @@ fun CommandSheet(api: Api, actions: Actions, onClose: () -> Unit, onSent: () -> 
                 Text("٢. اكتب وش تبغى بكلامك العادي", style = MaterialTheme.typography.labelLarge)
             }
             OutlinedTextField(
-                // المعاينة القديمة تنمسح فورا مع أي تعديل: ما ينرسل شي تحت ملخص قديم
+                // المعاينة القديمة تنمسح فوراً مع أي تعديل: ما ينرسل شي تحت ملخص قديم
                 value = text, onValueChange = { text = it.take(600); msg = null; preview = null}, minLines = 3, modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(if (pick != null) "مثلا: غير لون زر الحفظ للأزرق" else "مثلا: افتح جلسة المصروف على الجوال\nأو: وش الجلسات المفتوحة") },
+                placeholder = { Text(if (pick != null) "مثلاً: غيّر لون زر الحفظ للأزرق" else "مثلاً: افتح جلسة المصروف على الجوال\nأو: وش الجلسات المفتوحة") },
             )
             preview?.let { p ->
                 val sendable = p.optBoolean("sendable")
                 val line = if (needsProject(p) && projects.isNotEmpty()) "ما عرفت لأي مشروع. اختر المشروع فوق، ونصك ينرسل له زي ما هو."
                     else p.optString("summary").ifBlank { p.optString("message") }
                 Panel {
-                    Text(if (sendable) "وش فهم المنظم" else "ما ينرسل", style = MaterialTheme.typography.labelLarge, color = if (sendable) Tone.ok else Tone.warn)
+                    Text(if (sendable) "وش فهم المنظّم" else "ما ينرسل", style = MaterialTheme.typography.labelLarge, color = if (sendable) Tone.ok else Tone.warn)
                     Text(line)
                     p.optString("note").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     p.optString("request").takeIf { it.isNotBlank() }?.let { Text("الطلب: $it", style = MaterialTheme.typography.bodySmall) }
@@ -123,7 +123,7 @@ fun CommandSheet(api: Api, actions: Actions, onClose: () -> Unit, onSent: () -> 
                     val action = p.optString("action")
                     val label = when {
                         kind == "session" && action == "open" -> "افتح الجلسة بالبصمة"
-                        kind == "session" && action == "close" -> "سكرها"
+                        kind == "session" && action == "close" -> "سكّرها"
                         kind == "session" -> "اعرض الجلسات"
                         else -> "أرسل بالبصمة"
                     }
@@ -170,7 +170,7 @@ fun CommandSheet(api: Api, actions: Actions, onClose: () -> Unit, onSent: () -> 
                     }
                 }
                 lines.firstOrNull { it.contains("الرام") }?.let { Text(it.trim(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                OutlinedButton(enabled = !busy, onClick = { run { actions.sessionNoFingerprint("list") } }) { Text("حدث القائمة") }
+                OutlinedButton(enabled = !busy, onClick = { run { actions.sessionNoFingerprint("list") } }) { Text("حدّث القائمة") }
             }
         }
     }

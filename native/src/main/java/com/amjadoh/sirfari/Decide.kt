@@ -43,8 +43,8 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 /**
- * زر البصمة: «وافق بالبصمة» ← بصمتك ← التحقق ← التنفيذ ← «بدأ التنفيذ ✓» (يتلون ويهتز خفيف).
- * النجاح يعني إن السيرفر أكد، مو بس إن البصمة نجحت. يشتغل على نطاق التطبيق، فما ينقطع لو طلعت من الصفحة.
+ * زر البصمة: «وافق بالبصمة» ← بصمتك ← التحقق ← التنفيذ ← «بدأ التنفيذ ✓» (يتلوّن ويهتز خفيف).
+ * النجاح يعني إن السيرفر أكّد، مو بس إن البصمة نجحت. يشتغل على نطاق التطبيق، فما ينقطع لو طلعت من الصفحة.
  */
 @Composable
 fun FingerprintButton(
@@ -156,10 +156,10 @@ fun AdminSheet(req: JSONObject, actions: Actions, onClose: () -> Unit, onDone: (
     LaunchedEffect(msg) { if (msg?.first == true) { delay(1300); onDone(); onClose() } }
     val action = req.optString("action")
     val effect = when (action) {
-        "install" -> "يثبت نسخة جديدة من الخدمات على السيرفر ويعيد تشغيلها. التطبيق ممكن يفصل ثواني."
-        "fix" -> "إجراء صيانة من «الإجراءات الذكية». root يتأكد إنه ما يقطع شي قبل ما ينفذ."
+        "install" -> "يثبّت نسخة جديدة من الخدمات على السيرفر ويعيد تشغيلها. التطبيق ممكن يفصل ثواني."
+        "fix" -> "إجراء صيانة من «الإجراءات الذكية». root يتأكد إنه ما يقطع شي قبل ما ينفّذ."
         "trust" -> "يضيف هالجهاز بالذات لقائمة الأجهزة اللي تقدر توافق على طلبات root. ما يشيل أي جهاز."
-        else -> "ينفذ «$action» بصلاحية root."
+        else -> "ينفّذ «$action» بصلاحية root."
     }
     ModalBottomSheet(onDismissRequest = onClose, sheetState = sheet, containerColor = MaterialTheme.colorScheme.surface) {
         Column(
@@ -177,9 +177,9 @@ fun AdminSheet(req: JSONObject, actions: Actions, onClose: () -> Unit, onDone: (
             }
             if (!actions.trustedFor(req)) Panel(padding = 14) {
                 Text("جوالك الأصلي مو موثوق عند root للحين", style = MaterialTheme.typography.titleSmall, color = Tone.warn)
-                Text("وافق على هالطلب من سيرفري في المتصفح (Chrome). أول تحديث تثبته يوثق جوالك، وبعدها توافق من هنا.", style = MaterialTheme.typography.bodySmall)
+                Text("وافق على هالطلب من سيرفري في المتصفح (Chrome). أول تحديث تثبّته يوثّق جوالك، وبعدها توافق من هنا.", style = MaterialTheme.typography.bodySmall)
             } else FingerprintButton(
-                "وافق بالبصمة", "وافقت، root ينفذ", listOf("بصمتك", "التحقق من بصمتك", "root ينفذ"),
+                "وافق بالبصمة", "وافقت، root ينفّذ", listOf("بصمتك", "التحقق من بصمتك", "root ينفّذ"),
                 action = { _ -> actions.adminApprove(req) }, onResult = { ok, m -> msg = ok to m },
             )
             OutlinedButton(
@@ -196,7 +196,7 @@ fun AdminSheet(req: JSONObject, actions: Actions, onClose: () -> Unit, onDone: (
     }
 }
 
-/** طلبات root المعلقة من رد /api/admin */
+/** طلبات root المعلّقة من رد /api/admin */
 fun pendingAdmin(admin: JSONObject?): List<JSONObject> {
     val list = admin?.optJSONArray("requests") ?: return emptyList()
     return (0 until list.length()).mapNotNull { list.optJSONObject(it) }.filter { it.optString("state") == "pending" }

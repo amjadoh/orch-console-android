@@ -3,7 +3,7 @@ package com.amjadoh.sirfari
 import org.json.JSONArray
 import org.json.JSONObject
 
-// شكل بيانات سيرفري كما يرجعها السيرفر (/api/overview و/api/server). كل حقل اختياري:
+// شكل بيانات سيرفري كما يرجّعها السيرفر (/api/overview و/api/server). كل حقل اختياري:
 // لو السيرفر أقدم أو أحدث، نعرض اللي نعرفه وما نطيح.
 
 data class Problem(val key: String, val title: String, val level: String, val line: String)
@@ -11,7 +11,7 @@ data class TaskCard(
     val taskId: String, val projectId: String, val title: String, val status: String, val step: String,
     val first: String? = null, val second: String? = null, val since: Long? = null, val planPending: Boolean = false,
 ) {
-    /** مرحلة الشغل الحقيقية (من phase في المنظم): خطة ← ينفذ ← يراجع ← يفحص */
+    /** مرحلة الشغل الحقيقية (من phase في المنظّم): خطة ← ينفذ ← يراجع ← يفحص */
     val stage get() = when (step) { "approval" -> 0; "first" -> 1; "second" -> 2; "checks" -> 3; "done" -> 4; else -> if (status == "running") 1 else 0 }
 }
 data class Overview(

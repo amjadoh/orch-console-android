@@ -13,9 +13,9 @@ import java.security.Signature
 import java.security.spec.ECGenParameterSpec
 
 /**
- * مفتاح الجهاز: P-256 داخل Keystore الجوال (StrongBox لو موجود). ما يطلع من الجوال أبدا،
+ * مفتاح الجهاز: P-256 داخل Keystore الجوال (StrongBox لو موجود). ما يطلع من الجوال أبداً،
  * وكل توقيع يحتاج بصمة قوية (BIOMETRIC_STRONG)، ولو انضافت بصمة جديدة للجوال يبطل المفتاح ويحتاج تسجيل من جديد.
- * المحفوظ برا Keystore: معرف الاعتماد والعداد بس (مو أسرار).
+ * المحفوظ برا Keystore: معرّف الاعتماد والعدّاد بس (مو أسرار).
  */
 class DeviceKey(context: Context) {
     private val prefs = context.getSharedPreferences("device", Context.MODE_PRIVATE)
@@ -24,7 +24,7 @@ class DeviceKey(context: Context) {
     val credentialId: String? get() = prefs.getString("credentialId", null)
     val enrolled: Boolean get() = credentialId != null && keystore().containsAlias(ALIAS)
 
-    /** مفتاح جديد (يمسح القديم). يرجع المفتاح العام SPKI ومعرف اعتماد جديد. */
+    /** مفتاح جديد (يمسح القديم). يرجع المفتاح العام SPKI ومعرّف اعتماد جديد. */
     fun create(): Pair<PublicKey, ByteArray> {
         val ks = keystore()
         if (ks.containsAlias(ALIAS)) ks.deleteEntry(ALIAS)
@@ -57,14 +57,14 @@ class DeviceKey(context: Context) {
         prefs.edit().clear().apply()
     }
 
-    /** العداد يزيد مع كل توقيع (السيرفر يرفض لو ما زاد) */
+    /** العدّاد يزيد مع كل توقيع (السيرفر يرفض لو ما زاد) */
     fun nextCounter(): Int {
         val n = prefs.getInt("counter", 0) + 1
         prefs.edit().putInt("counter", n).apply()
         return n
     }
 
-    /** موقع جاهز، يشتغل بس بعد البصمة (BiometricPrompt + CryptoObject) */
+    /** موقّع جاهز، يشتغل بس بعد البصمة (BiometricPrompt + CryptoObject) */
     fun signer(): Signature = Signature.getInstance("SHA256withECDSA").apply {
         initSign(keystore().getKey(ALIAS, null) as PrivateKey)
     }

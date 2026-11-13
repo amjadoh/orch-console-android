@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
-/** رسم آخر ساعة (الوقت يطرح كـ Long قبل التحويل، وإلا تضيع دقة الدقايق): المعالج والذاكرة (٪). الأقدم يمين والأحدث يسار، مثل اتجاه القراءة. */
+/** رسم آخر ساعة (الوقت يُطرح كـ Long قبل التحويل، وإلا تضيع دقة الدقايق): المعالج والذاكرة (٪). الأقدم يمين والأحدث يسار، مثل اتجاه القراءة. */
 @Composable
 fun HistoryChart(points: List<Point>) {
     if (points.size < 3) return

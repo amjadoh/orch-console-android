@@ -5,7 +5,7 @@ import org.json.JSONObject
 
 /**
  * القرارات بالبصمة (نفس اللي يسويه الويب): خيارات ← بصمة ← إرسال ← متابعة الطلب.
- * لو انقطع الاتصال بعد الإرسال ما نرسل مرة ثانية أبدا: نقول لك تشيك الحالة، والسيرفر بعد يرفض التحدي المستخدم.
+ * لو انقطع الاتصال بعد الإرسال ما نرسل مرة ثانية أبداً: نقول لك تشيّك الحالة، والسيرفر بعد يرفض التحدي المستخدم.
  */
 class Actions(val api: Api, private val signer: Signer, private val device: DeviceKey) {
 
@@ -26,7 +26,7 @@ class Actions(val api: Api, private val signer: Signer, private val device: Devi
         val submissionId = try {
             api.post("/api/action/finish", JSONObject().put("challengeId", o.getString("challengeId")).put("credential", credential)).getString("submissionId")
         } catch (e: Api.Failure) {
-            if (e.status == 0) throw Api.Failure("انقطع الاتصال وقت الإرسال. ما بنعيد الإرسال: شيك حالة المهمة بعد شوي")
+            if (e.status == 0) throw Api.Failure("انقطع الاتصال وقت الإرسال. ما بنعيد الإرسال: شيّك حالة المهمة بعد شوي")
             throw e
         }
         onStep(2)
@@ -42,7 +42,7 @@ class Actions(val api: Api, private val signer: Signer, private val device: Devi
                 else -> throw Api.Failure(s.optString("detail").ifBlank { "انرفضت" })
             }
         }
-        throw Api.Failure("المنظم ما رد، شيك بعد شوي")
+        throw Api.Failure("المنظّم ما رد، شيّك بعد شوي")
     }
 
     // ── الجلسات (Claude على الجوال/اللابتوب) ──
@@ -83,11 +83,11 @@ class Actions(val api: Api, private val signer: Signer, private val device: Devi
                 }
             }
         }
-        throw Api.Failure("خدمة الجلسات ما ردت، شيك بعد شوي")
+        throw Api.Failure("خدمة الجلسات ما ردت، شيّك بعد شوي")
     }
 
     // ── طلبات root ──
-    /** «الإجراءات الذكية»: يطلب الوصفة (معرفها بس)، وينتظر root يفتح طلب ينتظر البصمة، ويرجعه */
+    /** «الإجراءات الذكية»: يطلب الوصفة (معرّفها بس)، وينتظر root يفتح طلب ينتظر البصمة، ويرجّعه */
     suspend fun requestRecipe(id: String, reason: String): JSONObject {
         api.post("/api/fix", JSONObject().put("fix", id).put("reason", reason.take(200)))
         repeat(30) {
@@ -98,7 +98,7 @@ class Actions(val api: Api, private val signer: Signer, private val device: Devi
                 if (x.optString("action") == "fix" && x.optJSONObject("args")?.optString("fix") == id && x.optString("state") == "pending") return x
             }
         }
-        throw Api.Failure("root ما استلم الطلب، جرب بعد شوي")
+        throw Api.Failure("root ما استلم الطلب، جرّب بعد شوي")
     }
 
     suspend fun adminApprove(r: JSONObject, onSigned: () -> Unit = {}): String {
@@ -118,8 +118,8 @@ class Actions(val api: Api, private val signer: Signer, private val device: Devi
                 val x = list.optJSONObject(i) ?: continue
                 if (x.optString("id") != r.getString("id")) continue
                 when (x.optString("state")) {
-                    "done" -> return "✅ " + (x.optJSONObject("result")?.optString("note")?.takeIf { it.isNotBlank() && it != "null" } ?: "root نفذ الطلب")
-                    "blocked" -> throw Api.Failure("⏸️ " + (x.optJSONObject("result")?.optString("note")?.takeIf { it.isNotBlank() && it != "null" } ?: "مشغول، ما تغير شي. جرب بعدين"))
+                    "done" -> return "✅ " + (x.optJSONObject("result")?.optString("note")?.takeIf { it.isNotBlank() && it != "null" } ?: "root نفّذ الطلب")
+                    "blocked" -> throw Api.Failure("⏸️ " + (x.optJSONObject("result")?.optString("note")?.takeIf { it.isNotBlank() && it != "null" } ?: "مشغول، ما تغيّر شي. جرّب بعدين"))
                     "failed", "rejected", "expired" -> {
                         val res = x.optJSONObject("result")
                         val steps = res?.optJSONArray("steps")
@@ -130,7 +130,7 @@ class Actions(val api: Api, private val signer: Signer, private val device: Devi
                 }
             }
         }
-        throw Api.Failure("root ما خلص للحين، شيك بعد شوي")
+        throw Api.Failure("root ما خلص للحين، شيّك بعد شوي")
     }
 
     suspend fun adminReject(id: String) { api.post("/api/admin/reject", JSONObject().put("id", id)) }
@@ -154,22 +154,22 @@ class Actions(val api: Api, private val signer: Signer, private val device: Devi
             "replan" to listOf("بصمتك", "التحقق من بصمتك", "المنفذ يبدأ يخطط"),
             "stop" to listOf("بصمتك", "التحقق من بصمتك", "إيقاف المنفذ وفك الحجز"),
             "retry" to listOf("بصمتك", "التحقق من بصمتك", "فتح محاولة جديدة"),
-            "command" to listOf("بصمتك", "التحقق من بصمتك", "المنظم يفتح الطلب"),
+            "command" to listOf("بصمتك", "التحقق من بصمتك", "المنظّم يفتح الطلب"),
         )
         val DONE = mapOf(
             "approve" to "✅ انسجلت الموافقة وبدأ التنفيذ",
             "cancel" to "انلغت المهمة",
             "revise" to "✏️ انرسل التعديل، المنفذ يعيد كتابة الخطة",
-            "switch" to "🔄 تبدل المنفذ",
+            "switch" to "🔄 تبدّل المنفذ",
             "replan" to "🔁 المنفذ بيحاول يكتب الخطة من جديد",
             "stop" to "⏹️ وقفت المهمة · الشغل باقي على السيرفر",
             "retry" to "🔁 انفتحت محاولة جديدة",
-            "command" to "📨 انرسل للمنظم، والخطة توصلك للموافقة",
+            "command" to "📨 انرسل للمنظّم، والخطة توصلك للموافقة",
         )
         private val SUBTITLE = mapOf(
-            "approve" to "وافق على الخطة وابدأ التنفيذ", "cancel" to "ألغ المهمة", "revise" to "عدل الخطة",
-            "switch" to "بدل المنفذ", "replan" to "أعد التخطيط", "stop" to "أوقف المهمة", "retry" to "أعد المحاولة",
-            "command" to "أرسل الأمر للمنظم",
+            "approve" to "وافق على الخطة وابدأ التنفيذ", "cancel" to "ألغِ المهمة", "revise" to "عدّل الخطة",
+            "switch" to "بدّل المنفذ", "replan" to "أعد التخطيط", "stop" to "أوقف المهمة", "retry" to "أعد المحاولة",
+            "command" to "أرسل الأمر للمنظّم",
         )
     }
 }

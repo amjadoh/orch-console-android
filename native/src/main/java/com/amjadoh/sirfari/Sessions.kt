@@ -39,7 +39,7 @@ import org.json.JSONObject
 
 // كل جلسات Claude وCodex اللي تاخذ من رام السيرفر، من أي مكان انفتحت. الحالة من hooks حق Claude Code (صادقة):
 // تشتغل / تحتاجك / جاهزة / غير معروف. القفل بالبصمة لجلسة Claude بعينها، بس لو جاهزة من 10 دقايق
-// (أو غير معروفة مع تأكيدك). Codex يظهر برامه بس (ما فيه طريقة رسمية تقفله من برا).
+// (أو غير معروفة مع تأكيدك). Codex يظهر برامه بس (ما فيه طريقة رسمية تقفله من برّا).
 
 data class SessionInfo(val id: String, val pid: Int, val start: Long, val kind: String, val label: String, val project: String?, val ageSec: Long?, val rssMb: Long?, val state: String, val stateSec: Long?) {
     val isCodex get() = kind.startsWith("codex")
@@ -103,7 +103,7 @@ fun SessionsSection(v: SessionsView?, actions: Actions, onChanged: () -> Unit) {
     val total = v.all.sumOf { it.rssMb ?: 0 }
     Section("الجلسات المفتوحة", "+ افتح جلسة", { open = true }) {
         Panel(padding = 0) {
-            if (v.all.isEmpty()) ListRow(divider = false) { Text("ما فيه جلسات Claude أو Codex شغالة", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            if (v.all.isEmpty()) ListRow(divider = false) { Text("ما فيه جلسات Claude أو Codex شغّالة", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             v.all.forEachIndexed { i, s ->
                 ListRow(Modifier.clickable { stop = s }, divider = i < v.all.lastIndex) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -184,9 +184,9 @@ private fun StopSheet(s: SessionInfo, actions: Actions, onClose: () -> Unit, onD
                 }
                 Text(
                     when {
-                        s.isCodex -> "Codex ما فيه طريقة رسمية تقفله من برا. اقفل المحادثة من تطبيق Codex."
-                        s.kind == "claude-rc" -> "جلسة فتحتها من سيرفري: تنقفل نهائيا (ما ترجع تنفتح لحالها)، وتقدر تفتحها مرة ثانية من «افتح جلسة»."
-                        else -> "تنقفل بهدوء، والمحادثة محفوظة وتقدر تكملها من تطبيق Claude. وقت القفل يتأكد من جديد إنها ما تشتغل."
+                        s.isCodex -> "Codex ما فيه طريقة رسمية تقفله من برّا. اقفل المحادثة من تطبيق Codex."
+                        s.kind == "claude-rc" -> "جلسة فتحتها من سيرفري: تنقفل نهائياً (ما ترجع تنفتح لحالها)، وتقدر تفتحها مرة ثانية من «افتح جلسة»."
+                        else -> "تنقفل بهدوء، والمحادثة محفوظة وتقدر تكمّلها من تطبيق Claude. وقت القفل يتأكد من جديد إنها ما تشتغل."
                     },
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -197,7 +197,7 @@ private fun StopSheet(s: SessionInfo, actions: Actions, onClose: () -> Unit, onD
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 androidx.compose.material3.Checkbox(checked = sure, onCheckedChange = { sure = it })
-                Text("حالتها غير معروفة (انفتحت قبل التحديث). متأكد إنها مو شغالة", style = MaterialTheme.typography.bodyMedium)
+                Text("حالتها غير معروفة (انفتحت قبل التحديث). متأكد إنها مو شغّالة", style = MaterialTheme.typography.bodyMedium)
             }
             val reason = s.blockReason
             if (reason == null) FingerprintButton(
@@ -221,7 +221,7 @@ private fun OpenSheet(projects: List<String>, actions: Actions, onClose: () -> U
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("افتح جلسة Claude", style = MaterialTheme.typography.headlineSmall)
             Text("تطلع لك في تطبيق Claude (Code) على الجوال واللابتوب. الحد 3 جلسات، وتنقفل لحالها لو ما استخدمتها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (projects.isEmpty()) Text("القائمة ما وصلت. اسحب للتحديث وجرب.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (projects.isEmpty()) Text("القائمة ما وصلت. اسحب للتحديث وجرّب.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 projects.forEach { p ->
                     val sel = p == pick

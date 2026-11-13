@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
 
 // سيرفري 2.1: «لوحة قرارات ليلية» بنفس كحلي الأيقونة. الأزرق للإجراء، والبرتقالي لـ«ينتظرك»،
-// والبنفسجي للشغال (عشان ما يختلط بأزرق الأزرار)، والأحمر للمشكلة.
+// والبنفسجي للشغّال (عشان ما يختلط بأزرق الأزرار)، والأحمر للمشكلة.
 private val Dark = darkColorScheme(
     primary = Color(0xFF5AB0FF), onPrimary = Color(0xFF04162B),
     primaryContainer = Color(0xFF123067), onPrimaryContainer = Color(0xFF9CCFFF),

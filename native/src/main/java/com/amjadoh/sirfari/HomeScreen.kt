@@ -36,7 +36,7 @@ import org.json.JSONObject
 
 /**
  * الرئيسية («لوحة قرارات»): فوق كم قرار ينتظرك وحالة السيرفر باختصار، وبعدها القرارات نفسها
- * (توافق من هنا على طول بعد ما تشوف وش بيتغير)، وبعدها اللي شغال الحين بمراحله. كله في شاشة وحدة.
+ * (توافق من هنا على طول بعد ما تشوف وش بيتغير)، وبعدها اللي شغّال الحين بمراحله. كله في شاشة وحدة.
  */
 @Composable
 fun HomeScreen(
@@ -103,12 +103,12 @@ private fun Hero(o: Overview, s: ServerView?, now: Long, openServer: () -> Unit)
             Dot(lc, 8, halo = true)
             Text(line, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        if (o.maintenanceUntil != null && o.maintenanceUntil > now) Chip("وضع الصيانة شغال", Tone.run)
+        if (o.maintenanceUntil != null && o.maintenanceUntil > now) Chip("وضع الصيانة شغّال", Tone.run)
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("$n", style = MaterialTheme.typography.headlineLarge, color = if (n > 0) Tone.warn else MaterialTheme.colorScheme.primary)
             Column(Modifier.padding(bottom = 6.dp)) {
                 Text(if (n > 0) "ينتظرون قرارك" else "ما عليك قرارات", style = MaterialTheme.typography.titleMedium)
-                Text("شغالة ${o.running} · خلصت اليوم ${o.doneToday}" + if (o.failed > 0) " · فشلت ${o.failed}" else "",
+                Text("شغّالة ${o.running} · خلصت اليوم ${o.doneToday}" + if (o.failed > 0) " · فشلت ${o.failed}" else "",
                     style = MaterialTheme.typography.labelMedium, color = if (o.failed > 0) Tone.bad else MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -224,12 +224,12 @@ fun CompactTask(t: TaskCard, color: Color, label: String, onClick: () -> Unit) {
 
 private val STAGES = listOf("خطة", "ينفذ", "يراجع", "يفحص")
 
-/** «شغال الحين»: كل مهمة بمراحلها الحقيقية (مو نسبة وهمية) */
+/** «شغّال الحين»: كل مهمة بمراحلها الحقيقية (مو نسبة وهمية) */
 @Composable
 private fun Running(o: Overview, openTask: (String) -> Unit) {
     val running = o.tasks.filter { it.status == "running" }
     if (running.isEmpty()) return
-    Section("شغال الحين") {
+    Section("شغّال الحين") {
         running.take(2).forEach { t ->
             Panel(padding = 16, modifier = Modifier.clickable { openTask(t.taskId) }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
