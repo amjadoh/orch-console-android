@@ -100,5 +100,7 @@ class ModelsTest {
         assertTrue("الخدمة نفسها ما تنقفل", v.all[4].blockReason!!.contains("خدمة Codex"))
         assertTrue(!v.codexDown)
         assertTrue(SessionsModel.parse(JSONObject("""{"codex":{"at":1,"ok":false,"threads":[]}}""")).codexDown)
+        assertTrue(!v.codexPartial)
+        assertTrue(SessionsModel.parse(JSONObject("""{"codex":{"at":1,"ok":true,"complete":false,"threads":[]}}""")).codexPartial)
     }
 }

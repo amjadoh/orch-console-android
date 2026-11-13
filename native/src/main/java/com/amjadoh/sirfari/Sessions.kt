@@ -61,7 +61,7 @@ data class SessionInfo(val id: String, val pid: Int, val start: Long, val kind: 
 }
 data class DeviceSession(val sessionId: String, val tool: String, val project: String?, val state: String, val stateSec: Long?)
 data class DeviceInfo(val id: String, val name: String, val stale: Boolean, val sessions: List<DeviceSession>, val ramMb: Long)
-data class SessionsView(val all: List<SessionInfo>, val stale: Boolean, val openable: List<String>, val installed: Boolean, val devices: List<DeviceInfo> = emptyList(), val openNow: List<String> = emptyList(), val codexDown: Boolean = false) {
+data class SessionsView(val all: List<SessionInfo>, val stale: Boolean, val openable: List<String>, val installed: Boolean, val devices: List<DeviceInfo> = emptyList(), val openNow: List<String> = emptyList(), val codexDown: Boolean = false, val codexPartial: Boolean = false) {
     /** كل المشاريع (Codex يقدر يفتح حتى اللي فيه جلسة Claude مفتوحة) */
     val allProjects get() = (openable + openNow).distinct().sorted()
 }
@@ -114,7 +114,7 @@ object SessionsModel {
                 name ?: it.optString("project").takeIf { p -> p.isNotBlank() && p != "null" }, null, null,
                 it.optString("state", "unknown"), if (it.isNull("stateSec")) null else it.optLong("stateSec"), it.optInt("subagents"))
         }
-        return SessionsView(threads + all, a?.optBoolean("stale") ?: true, openable, o.optBoolean("installed"), devices, openNow, codexDown = cx != null && !cx.optBoolean("ok", true))
+        return SessionsView(threads + all, a?.optBoolean("stale") ?: true, openable, o.optBoolean("installed"), devices, openNow, codexDown = cx != null && !cx.optBoolean("ok", true), codexPartial = cx != null && !cx.optBoolean("complete", true))
     }
 }
 
@@ -158,6 +158,7 @@ fun SessionsSection(v: SessionsView?, actions: Actions, onChanged: () -> Unit) {
         }
         if (v.all.isNotEmpty()) Text("المجموع ${total} ميجا من رام السيرفر${if (v.stale) " · القائمة قديمة شوي" else ""}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (v.codexDown) Text("خدمة Codex ما ردت، فمحادثات Codex ما تطلع الحين", style = MaterialTheme.typography.labelSmall, color = Tone.warn)
+        else if (v.codexPartial) Text("محادثات Codex كثيرة، وظاهر منها جزء بس", style = MaterialTheme.typography.labelSmall, color = Tone.warn)
     }
     v.devices.forEach { d -> DeviceSection(d) }
     stop?.let { s -> StopSheet(s, actions, onClose = { stop = null }, onDone = onChanged) }
