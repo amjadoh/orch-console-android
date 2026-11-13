@@ -126,6 +126,14 @@ class Actions(val api: Api, private val signer: Signer, private val device: Devi
 
     private fun currentId() = device.credentialId
 
+    /** هل جوالك موثوق عند root لهالطلب؟ (لو لا: نقول له يوافق من المتصفح بدل زر يفشل) */
+    fun trustedFor(r: JSONObject): Boolean {
+        val allow = r.optJSONArray("allowCredentials") ?: return true
+        if (allow.length() == 0) return true
+        val me = currentId() ?: return false
+        return (0 until allow.length()).any { allow.optString(it) == me }
+    }
+
     companion object {
         val STEPS = mapOf(
             "approve" to listOf("بصمتك", "التحقق من بصمتك", "تسجيل الموافقة وبدء التنفيذ"),
