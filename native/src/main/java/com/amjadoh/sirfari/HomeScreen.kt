@@ -42,6 +42,7 @@ import org.json.JSONObject
 fun HomeScreen(
     r: Repo.Result<Overview>?, server: Repo.Result<ServerView>?, admin: JSONObject?, now: Long, actions: Actions?,
     openServer: () -> Unit, openTask: (String) -> Unit, openTasks: () -> Unit = {}, onRetry: () -> Unit = {}, onChanged: () -> Unit = {},
+    smart: @Composable () -> Unit = {},
 ) {
     FreshnessBar(r, now, onRetry)
     val o = r?.data
@@ -54,6 +55,7 @@ fun HomeScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                     Hero(o, server?.data, now, openServer)
+                    smart()
                     Running(o, openTask)
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -63,6 +65,7 @@ fun HomeScreen(
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 Hero(o, server?.data, now, openServer)
+                smart()
                 Decisions(o, admin, 2, openTask, openTasks, { approving = it }, { adminReq = it })
                 Running(o, openTask)
             }

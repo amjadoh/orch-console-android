@@ -157,7 +157,8 @@ fun AdminSheet(req: JSONObject, actions: Actions, onClose: () -> Unit, onDone: (
     val action = req.optString("action")
     val effect = when (action) {
         "install" -> "يثبّت نسخة جديدة من الخدمات على السيرفر ويعيد تشغيلها. التطبيق ممكن يفصل ثواني."
-        "fix" -> "يطبّق حل جاهز على السيرفر بصلاحية root."
+        "fix" -> "إجراء صيانة من «الإجراءات الذكية». root يتأكد إنه ما يقطع شي قبل ما ينفّذ."
+        "trust" -> "يضيف هالجهاز بالذات لقائمة الأجهزة اللي تقدر توافق على طلبات root. ما يشيل أي جهاز."
         else -> "ينفّذ «$action» بصلاحية root."
     }
     ModalBottomSheet(onDismissRequest = onClose, sheetState = sheet, containerColor = MaterialTheme.colorScheme.surface) {
@@ -174,7 +175,10 @@ fun AdminSheet(req: JSONObject, actions: Actions, onClose: () -> Unit, onDone: (
                 Text("وش بيصير؟", style = MaterialTheme.typography.titleSmall)
                 Text(effect, style = MaterialTheme.typography.bodyMedium)
             }
-            FingerprintButton(
+            if (!actions.trustedFor(req)) Panel(padding = 14) {
+                Text("جوالك الأصلي مو موثوق عند root للحين", style = MaterialTheme.typography.titleSmall, color = Tone.warn)
+                Text("وافق على هالطلب من سيرفري في المتصفح (Chrome). أول تحديث تثبّته يوثّق جوالك، وبعدها توافق من هنا.", style = MaterialTheme.typography.bodySmall)
+            } else FingerprintButton(
                 "وافق بالبصمة", "وافقت، root ينفّذ", listOf("بصمتك", "التحقق من بصمتك", "root ينفّذ"),
                 action = { _ -> actions.adminApprove(req) }, onResult = { ok, m -> msg = ok to m },
             )

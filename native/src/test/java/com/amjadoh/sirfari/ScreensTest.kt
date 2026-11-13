@@ -100,6 +100,21 @@ class ScreensTest {
         rule.onNodeWithText("يحتاج قرارك").assertIsDisplayed()
     }
 
+    private val catalog = Maint.catalog(JSONObject("""
+        {"available":true,"areas":{"memory":"الذاكرة","disk":"القرص"},
+         "suggestions":[{"id":"zram-on","why":"الـ Swap 99% ومافيه احتياط."},{"id":"restart-openclaw","why":"مدير الأعمال ماخذ 2700 ميجا."}],
+         "recipes":[{"id":"zram-on","label":"تفعيل zram (Swap مضغوط في الرام)","area":"memory","effect":"x","impact":"y","rollback":"z","protected":false,"guard":{"state":"idle","why":""},"pending":false},
+                    {"id":"restart-openclaw","label":"إعادة تشغيل مدير الأعمال","area":"memory","effect":"x","impact":"y","rollback":"z","protected":true,"guard":{"state":"later","why":"يتأكد وقت التنفيذ"},"pending":false},
+                    {"id":"clean-gradle","label":"تنظيف كاش Gradle","area":"disk","effect":"x","impact":"y","rollback":"z","protected":false,"guard":{"state":"later","why":""},"pending":true}]}
+    """))
+
+    @Test
+    fun catalogParses() {
+        org.junit.Assert.assertEquals(listOf("zram-on", "restart-openclaw"), catalog.suggestions.map { it.id })
+        org.junit.Assert.assertTrue(catalog.recipe("restart-openclaw")!!.protected)
+        org.junit.Assert.assertTrue(catalog.recipe("clean-gradle")!!.pending)
+    }
+
     private fun actions(): Actions {
         val act = Robolectric.buildActivity(FragmentActivity::class.java).setup().get()
         val device = DeviceKey(act)
@@ -115,7 +130,8 @@ class ScreensTest {
 
     @Test @Config(qualifiers = "w411dp-h891dp-xxhdpi")
     fun serverFolded() {
-        screen("server-411", dark = true) { ServerScreen(Repo.Result(server, now, false, null), now) }
+        screen("server-411", dark = true) { ServerScreen(Repo.Result(server, now, false, null), now, smart = { SmartActions(catalog) }) }
+        rule.onNodeWithText("تفعيل zram (Swap مضغوط في الرام)").assertExists()
         rule.onNodeWithText("الذاكرة").assertIsDisplayed()
     }
 
