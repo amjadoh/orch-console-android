@@ -67,6 +67,16 @@ class Actions(val api: Api, private val signer: Signer, private val device: Devi
         return waitSession(r.getString("nonce"))
     }
 
+    /** قفل محادثة Codex بعينها (أرشفة): رقمها داخل التحدي، والسيرفر يتأكد من حالتها من خدمة Codex */
+    suspend fun stopCodex(s: SessionInfo, onSigned: () -> Unit = {}): String {
+        val o = api.post("/api/session/options", JSONObject().put("action", "cxstop").put("thread", s.id))
+        val credential = signer.signOptions(o.getJSONObject("publicKey"), "اقفل محادثة Codex ${s.project ?: ""}".trim())
+        onSigned()
+        val r = api.post("/api/session/request", JSONObject().put("action", "cxstop").put("thread", s.id)
+            .put("nonce", o.getString("nonce")).put("createdAt", o.getLong("createdAt")).put("credential", credential))
+        return waitSession(r.getString("nonce"))
+    }
+
     suspend fun sessionNoFingerprint(action: String, project: String = ""): String {
         val r = api.post("/api/session/request", JSONObject().put("action", action).put("project", project))
         return waitSession(r.getString("nonce"))

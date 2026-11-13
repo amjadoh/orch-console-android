@@ -80,4 +80,25 @@ class ModelsTest {
         assertTrue(validNewProject("TV-Remote", v.allProjects)!!.contains("فيه مشروع"))
         for (bad in listOf("", " ", "a/b", "-x", "a..b", "x.bak", "app-e2194b3", "it's", "a".repeat(41))) assertTrue(bad, validNewProject(bad, v.allProjects) != null)
     }
+
+    @Test
+    fun codexThreads() {
+        val v = SessionsModel.parse(JSONObject("""{"installed":true,"list":"","codex":{"at":1,"ok":true,"threads":[
+            {"id":"01a1d6bd-0fce-77b3-888b-ddc3ffcfce35","name":"المصروف","project":"المصروف","state":"ready","stateSec":1200,"subagents":2},
+            {"id":"01a1d6bd-0fce-77b3-888b-ddc3ffcfce36","name":null,"project":"tv-remote","state":"working","stateSec":5,"subagents":0},
+            {"id":"01a1d6bd-0fce-77b3-888b-ddc3ffcfce37","name":"x","state":"ready","stateSec":60,"subagents":0},
+            {"id":"01a1d6bd-0fce-77b3-888b-ddc3ffcfce38","name":"y","state":"unknown","stateSec":null,"subagents":0}]},
+            "all":{"at":1,"stale":false,"sessions":[{"id":"9-1","pid":9,"start":1,"kind":"codex-app","label":"خدمة Codex","project":null,"ageSec":10,"rssMb":300,"state":"unknown","stateSec":null}]}}"""))
+        assertEquals(5, v.all.size)
+        val (a, b, c, d) = v.all.take(4)
+        assertTrue(a.isCodexThread && a.project == "المصروف" && a.subagents == 2)
+        assertNull("جاهزة من 20 دقيقة: تنقفل", a.blockReason)
+        assertEquals("tv-remote", b.project)
+        assertTrue("تشتغل", b.blockReason != null)
+        assertTrue("خلصت قبل دقيقة", c.blockReason != null)
+        assertTrue("غير معروفة", d.blockReason != null)
+        assertTrue("الخدمة نفسها ما تنقفل", v.all[4].blockReason!!.contains("خدمة Codex"))
+        assertTrue(!v.codexDown)
+        assertTrue(SessionsModel.parse(JSONObject("""{"codex":{"at":1,"ok":false,"threads":[]}}""")).codexDown)
+    }
 }
