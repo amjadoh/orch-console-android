@@ -140,7 +140,7 @@ class ScreensTest {
         val a = actions()
         val api = Api("http://127.0.0.1:9")
         val repo = Repo(rule.activity, api)
-        rule.setContent { SirfariTheme { SirfariApp(repo, api, a, androidx.compose.runtime.mutableStateOf(null)) {} } }
+        rule.setContent { SirfariTheme(dark = true) { SirfariApp(repo, api, a, androidx.compose.runtime.mutableStateOf(null)) {} } }
         rule.mainClock.advanceTimeBy(500)
         Thread.sleep(1500) // الطلب يفشل على IO
         rule.mainClock.advanceTimeBy(500)

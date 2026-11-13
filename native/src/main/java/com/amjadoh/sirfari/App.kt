@@ -130,7 +130,8 @@ fun SirfariApp(
     // صفحة المهمة والجوال مقفول: نخفي شريط التبويبات عشان شريط القرار ياخذ مكانه تحت
     val hideNav = !showSettings && tab == Tab.Tasks && selectedTask != null && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 700
 
-    CompositionLocalProvider(LocalAppScope provides scope, LocalRefresh provides tick) {
+    // لون النص الافتراضي من الثيم (بدونه يطلع النص أسود على الكحلي)
+    CompositionLocalProvider(LocalAppScope provides scope, LocalRefresh provides tick, androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onBackground) {
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             Column(Modifier.fillMaxSize().statusBarsPadding()) {
                 Header(

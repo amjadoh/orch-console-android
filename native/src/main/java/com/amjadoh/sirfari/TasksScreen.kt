@@ -327,7 +327,7 @@ internal fun TaskBody(d: TaskDetail, onSelect: (String?) -> Unit, showBack: Bool
 private fun Agent(name: String, role: String, color: Color, modifier: Modifier) {
     Row(modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(color.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
-            Text(name.take(1).uppercase(), style = MaterialTheme.typography.labelLarge, color = color)
+            Text(if (name.startsWith("Codex", true)) "X" else name.take(1).uppercase(), style = MaterialTheme.typography.labelLarge, color = color)
         }
         Column {
             Text(name, style = MaterialTheme.typography.titleSmall)
