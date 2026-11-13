@@ -96,14 +96,21 @@ fun CommandSheet(api: Api, actions: Actions, onClose: () -> Unit, onSent: () -> 
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("أمر جديد", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            if (projects.isNotEmpty()) {
+                Text("١. اختر المشروع", style = MaterialTheme.typography.labelLarge)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    projects.forEach { n -> FilterChip(selected = pick == n, onClick = { pick = if (pick == n) null else n; preview = null; msg = null }, label = { Text(n) }) }
+                }
+                Text("٢. اكتب وش تبغى بكلامك العادي", style = MaterialTheme.typography.labelLarge)
+            }
             OutlinedTextField(
                 // المعاينة القديمة تنمسح فوراً مع أي تعديل: ما ينرسل شي تحت ملخص قديم
-                value = text, onValueChange = { text = it.take(600); msg = null; preview = null; if (it.isBlank()) pick = null }, minLines = 3, modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("مثلاً: افتح جلسة للمصروف: أضف تصدير PDF\nأو: افتح جلسة المصروف على الجوال") },
+                value = text, onValueChange = { text = it.take(600); msg = null; preview = null}, minLines = 3, modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(if (pick != null) "مثلاً: غيّر لون زر الحفظ للأزرق" else "مثلاً: افتح جلسة المصروف على الجوال\nأو: وش الجلسات المفتوحة") },
             )
             preview?.let { p ->
                 val sendable = p.optBoolean("sendable")
-                val line = if (needsProject(p) && projects.isNotEmpty()) "ما عرفت لأي مشروع. اختر المشروع تحت، ونصك ينرسل له زي ما هو."
+                val line = if (needsProject(p) && projects.isNotEmpty()) "ما عرفت لأي مشروع. اختر المشروع فوق، ونصك ينرسل له زي ما هو."
                     else p.optString("summary").ifBlank { p.optString("message") }
                 Panel {
                     Text(if (sendable) "وش فهم المنظّم" else "ما ينرسل", style = MaterialTheme.typography.labelLarge, color = if (sendable) Tone.ok else Tone.warn)
@@ -132,13 +139,7 @@ fun CommandSheet(api: Api, actions: Actions, onClose: () -> Unit, onSent: () -> 
                     }) { Text(label) }
                 }
             }
-            if (projects.isNotEmpty() && (pick != null || needsProject(preview))) {
-                Text("لأي مشروع؟", style = MaterialTheme.typography.labelLarge)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    projects.forEach { n -> FilterChip(selected = pick == n, onClick = { pick = if (pick == n) null else n; preview = null }, label = { Text(n) }) }
-                }
-                Text("أسئلة السيرفر نفسه: من تبويب السيرفر «اسأل Claude».", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            Text("أسئلة عن السيرفر نفسه: من تبويب السيرفر «اسأل Claude».", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             msg?.let { (ok, m) -> Text(m, color = if (ok) Tone.ok else MaterialTheme.colorScheme.error) }
 
