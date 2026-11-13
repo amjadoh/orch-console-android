@@ -206,7 +206,7 @@ private fun Header(tab: Tab, settings: Boolean, onSettings: () -> Unit, onComman
                 val hour = c.get(Calendar.HOUR_OF_DAY)
                 Text("${DAYS[c.get(Calendar.DAY_OF_WEEK) - 1]} · ${c.get(Calendar.DAY_OF_MONTH)} ${MONTHS[c.get(Calendar.MONTH)]}",
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(if (hour in 4..11) "صباح الخير يا أمجد" else "مساء الخير يا أمجد", style = MaterialTheme.typography.titleLarge)
+                Text(if (hour in 4..11) "صباح الخير يا ريّس" else "مساء الخير يا ريّس", style = MaterialTheme.typography.titleLarge)
             } else {
                 Text(if (settings) "الإعدادات" else tab.label, style = MaterialTheme.typography.titleLarge)
             }
