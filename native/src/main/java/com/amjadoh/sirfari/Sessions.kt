@@ -53,7 +53,9 @@ data class SessionInfo(val id: String, val pid: Int, val start: Long, val kind: 
         else -> null
     }
 }
-data class SessionsView(val all: List<SessionInfo>, val stale: Boolean, val openable: List<String>, val installed: Boolean)
+data class DeviceSession(val sessionId: String, val tool: String, val project: String?, val state: String, val stateSec: Long?)
+data class DeviceInfo(val id: String, val name: String, val stale: Boolean, val sessions: List<DeviceSession>, val ramMb: Long)
+data class SessionsView(val all: List<SessionInfo>, val stale: Boolean, val openable: List<String>, val installed: Boolean, val devices: List<DeviceInfo> = emptyList())
 
 object SessionsModel {
     fun parse(o: JSONObject): SessionsView {
@@ -68,7 +70,19 @@ object SessionsModel {
         // «📂 تقدر تفتح: a، b، c» من قائمة rc-ctl
         val line = o.optString("list").lines().firstOrNull { it.contains("تقدر تفتح") }
         val openable = line?.substringAfter(":", "")?.split("،")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
-        return SessionsView(all, a?.optBoolean("stale") ?: true, openable, o.optBoolean("installed"))
+        val devs = o.optJSONArray("devices")
+        val devices = (0 until (devs?.length() ?: 0)).mapNotNull { devs!!.optJSONObject(it) }.map { d ->
+            val ss = d.optJSONArray("sessions")
+            val ps = d.optJSONArray("processes")
+            DeviceInfo(
+                d.optString("id"), d.optString("name"), d.optBoolean("stale"),
+                (0 until (ss?.length() ?: 0)).mapNotNull { ss!!.optJSONObject(it) }.map { x ->
+                    DeviceSession(x.optString("sessionId"), x.optString("tool"), x.optString("project").takeIf { p -> p.isNotBlank() && p != "null" }, x.optString("state", "unknown"), if (x.isNull("stateSec")) null else x.optLong("stateSec"))
+                },
+                (0 until (ps?.length() ?: 0)).sumOf { ps!!.optJSONObject(it)?.optLong("rssMb") ?: 0L },
+            )
+        }
+        return SessionsView(all, a?.optBoolean("stale") ?: true, openable, o.optBoolean("installed"), devices)
     }
 }
 
@@ -106,10 +120,43 @@ fun SessionsSection(v: SessionsView?, actions: Actions, onChanged: () -> Unit) {
                 }
             }
         }
-        if (v.all.isNotEmpty()) Text("المجموع ${total} ميجا رام${if (v.stale) " · القائمة قديمة شوي" else ""}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (v.all.isNotEmpty()) Text("المجموع ${total} ميجا من رام السيرفر${if (v.stale) " · القائمة قديمة شوي" else ""}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+    v.devices.forEach { d -> DeviceSection(d) }
     stop?.let { s -> StopSheet(s, actions, onClose = { stop = null }, onDone = onChanged) }
     if (open) OpenSheet(v.openable, actions, onClose = { open = false }, onDone = onChanged)
+}
+
+/** جلسات اللابتوب (من sirfari-agent): للعرض، والتحكم من اللابتوب نفسه */
+@Composable
+fun DeviceSection(d: DeviceInfo) {
+    Section("اللابتوب · ${d.name}", if (d.stale) "انقطع" else "متصل") {
+        Panel(padding = 0) {
+            if (d.sessions.isEmpty()) ListRow(divider = false) { Text("ما فيه جلسات Claude أو Codex مفتوحة", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            d.sessions.forEachIndexed { i, s ->
+                ListRow(divider = i < d.sessions.lastIndex) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        val codex = s.tool == "codex"
+                        val c = if (codex) Tone.action else Color(0xFFE7A27A)
+                        Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(c.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+                            Text(if (codex) "X" else "C", style = MaterialTheme.typography.labelLarge, color = c)
+                        }
+                        Text(s.project ?: if (codex) "Codex" else "Claude", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        StateChipOf(s.state, s.stateSec)
+                    }
+                }
+            }
+        }
+        if (d.ramMb > 0) Text("Claude وCodex ياخذون ${d.ramMb} ميجا من رام اللابتوب", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun StateChipOf(state: String, sec: Long?) = when (state) {
+    "working" -> Chip("تشتغل", Tone.run)
+    "needs" -> Chip("تحتاجك", Tone.warn)
+    "ready" -> Chip("جاهزة · ${dur(sec)}", Tone.ok)
+    else -> Chip("غير معروف", Tone.idle)
 }
 
 @Composable

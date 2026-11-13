@@ -113,7 +113,8 @@ class ScreensTest {
          "all":{"at":$now,"stale":false,"sessions":[
            {"id":"1580698-77","pid":1580698,"start":77,"kind":"claude-app","label":"Claude (التطبيق)","project":"alatheel-orchestrator","ageSec":172800,"rssMb":327,"state":"working","stateSec":30},
            {"id":"1555928-66","pid":1555928,"start":66,"kind":"claude-app","label":"Claude (التطبيق)","project":"اسطبل-الأثيل","ageSec":176400,"rssMb":219,"state":"ready","stateSec":90000},
-           {"id":"1761-5","pid":1761,"start":5,"kind":"codex-app","label":"Codex (التطبيق)","project":null,"ageSec":666000,"rssMb":93,"state":"unknown","stateSec":null}]}}
+           {"id":"1761-5","pid":1761,"start":5,"kind":"codex-app","label":"Codex (التطبيق)","project":null,"ageSec":666000,"rssMb":93,"state":"unknown","stateSec":null}]},
+         "devices":[{"id":"abcd1234","name":"AMJAD-PC","os":"windows","stale":false,"sessions":[{"sessionId":"s1","tool":"claude","project":"masroof","state":"needs","stateSec":40}],"processes":[{"tool":"claude","rssMb":310}]}]}
     """))
 
     @Test
@@ -124,6 +125,9 @@ class ScreensTest {
         org.junit.Assert.assertNull("جاهزة من زمان = تنقفل", sessionsView.all[1].blockReason)
         org.junit.Assert.assertNotNull("Codex ما ينقفل من هنا", sessionsView.all[2].blockReason)
         org.junit.Assert.assertNull(sessionsView.all[2].project)
+        org.junit.Assert.assertEquals("AMJAD-PC", sessionsView.devices.single().name)
+        org.junit.Assert.assertEquals("needs", sessionsView.devices.single().sessions.single().state)
+        org.junit.Assert.assertEquals(310L, sessionsView.devices.single().ramMb)
     }
 
     @Test @Config(qualifiers = "w411dp-h891dp-xxhdpi")
@@ -132,6 +136,7 @@ class ScreensTest {
         screen("sessions-411", dark = true) { SessionsSection(sessionsView, a) {} }
         rule.onNodeWithText("الجلسات المفتوحة").assertIsDisplayed()
         rule.onNodeWithText("اسطبل-الأثيل").assertIsDisplayed()
+        rule.onNodeWithText("اللابتوب · AMJAD-PC").assertExists()
     }
 
     @Test
